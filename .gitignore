@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+# Unwanted config files
+compile_commands.json
