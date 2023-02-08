@@ -65,6 +65,8 @@ endif
 # Remove space after separator
 PSEP = $(strip $(SEP))
 
+TARGET := main.app
+
 VERBOSE = TRUE
 
 # Hide or not the calls depending of VERBOSE
@@ -87,7 +89,7 @@ all: help
 ## Build the project
 main: dirs $(OBJS)
 	@printf "\n\n\n########## LINKING OBJECTS ##########\n\n\n"
-	$(HIDE)$(CXX) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $@
+	$(HIDE)$(CXX) $(LDFLAGS) $(OBJS) $(LDLIBS) -o $(TARGET)
 	@printf "\n\n########## DONE ##########\n\n\n"
 
 $(OBJS): $(HEADERS)
@@ -115,7 +117,7 @@ doc:
 clean:
 	@printf "\n\n\n########## CLEANING THE PROJECT ##########\n\n\n"
 	$(HIDE)$(RMDIR) $(subst /,$(PSEP),$(TARGETDIRS)) $(ERRIGNORE)
-	$(HIDE)$(RM) main $(ERRIGNORE)
+	$(HIDE)$(RM) $(TARGET) $(ERRIGNORE)
 	@printf "\n\n########## DONE ##########\n\n\n"
 	@echo Cleaning done ! 
 
