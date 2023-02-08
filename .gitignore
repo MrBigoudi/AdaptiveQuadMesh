@@ -5,7 +5,6 @@
 *.slo
 *.lo
 *.o
-*.obj
 
 # Precompiled Headers
 *.gch
@@ -31,5 +30,6 @@
 *.out
 *.app
 
-# Unwanted config files
+# Unwanted files
 compile_commands.json
+.cache
