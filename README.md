@@ -10,6 +10,8 @@ Implementation in C++ of an [adaptive quad mesh simplification algorithm](media/
 
 ## File format
 
+adapated from [this](https://github.com/Jw-Jn/Mesh-Subdivision)
+
 <!-- TODO -->
 
 ## Operations
