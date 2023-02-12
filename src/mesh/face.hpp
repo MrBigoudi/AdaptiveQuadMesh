@@ -1,6 +1,7 @@
 #pragma once
 
 #include "edge.hpp"
+#include <vector>
 
 namespace mesh{
 
@@ -11,11 +12,39 @@ class Edge;
 */
 class Face{
 
+    private:
+        /**
+         * The id counter
+        */
+        static int ID_CPT;
+
     public:
         /**
          *  One of the surronding edge
         */
         mesh::Edge* mEdge;
+
+        /**
+         * Flag to delete this face
+        */
+        bool mToDelete = false;
+
+        /**
+         * Flag to know it this face will be merge
+        */
+        bool mToMerge = false;
+
+        /**
+         * The face's id
+        */
+        int mId = (mesh::Face::ID_CPT++);
+
+    private:
+        /**
+         * Get a list of all edges surrounding the face given the starting point
+         * @param startingEdge The edge where to start the loop
+        */
+        std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge);
 
     public:
         /**
@@ -25,6 +54,30 @@ class Face{
         Face(mesh::Edge* edge = nullptr){
             mEdge = edge;
         };
+
+        /**
+         * Get a list of all edges surrounding the face
+        */
+        std::vector<mesh::Edge*> getSurroundingEdges();
+
+        /**
+         * Merge two faces
+         * @param face The face we'll merge
+         * @return The newly created face
+        */
+        mesh::Face* mergeFace(mesh::Face* face);
+
+        /**
+         * Cast a face into a printable string
+         * @return The face as a string
+        */
+        std::string toString();
+
+        /**
+         * Print a face
+        */
+        void print();
+
 };
 
 }

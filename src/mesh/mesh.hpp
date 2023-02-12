@@ -103,6 +103,68 @@ class Mesh{
         */
         std::vector<std::vector<mesh::Vertex*>> verticesOfFaces();
 
+        /**
+         * Transform a triangular mesh into a quad one
+        */
+        void triToQuad();
+
+        /**
+         * Mark the edges to remove to transform a triangular mesh into a quad one
+        */
+        void triToQuadRemovalMarkingPhase();
+
+        /**
+         * Remove all marked edges
+        */
+        void removeMarkedEdges();
+
+        /**
+         * Remove an edge
+         * @param edge The edge to be removed from the mesh
+        */
+        void removeEdge(mesh::Edge* edge);
+
+        /**
+         * Remove a face from the list
+         * @param face The face to remove
+        */
+        void removeFaceFromList(mesh::Face* face);
+
+        /**
+         * Remove an edge from the list
+         * @param edge The edge to remove
+        */
+        void removeEdgeFromList(mesh::Edge* edge);
+
+        /**
+         * Cast the mesh into a list of printable strings
+         * @return The mesh as a string vector
+        */
+        std::vector<std::string> toString();
+
+        /**
+         * Cast the mesh's vertices into a list of printable strings
+         * @return The vertices as a string vector
+        */
+        std::vector<std::string> verticesToString();
+
+        /**
+         * Cast the mesh's faces into a list of printable strings
+         * @return The faces as a string vector
+        */
+        std::vector<std::string> facesToString();
+
+        /**
+         * Cast the mesh's edges into a list of printable strings
+         * @return The edges as a string vector
+        */
+        std::vector<std::string> edgesToString();
+
+        /**
+         * Print the mesh in the standard output
+        */
+        void print();
+
 };
 
 }

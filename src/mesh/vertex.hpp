@@ -12,11 +12,17 @@ class Edge;
 */
 class Vertex{
 
+    private:
+        /**
+         * The id counter
+        */
+        static int ID_CPT;
+
     public:
         /**
-         * The vertex index
+         * The vertex's id
         */
-        int mId;
+        int mId = (mesh::Vertex::ID_CPT++);
 
         /**
          * The vertex coordinates
@@ -28,18 +34,32 @@ class Vertex{
         */
         mesh::Edge* mEdge;
 
+        /**
+         * Flag to delete this vertex
+        */
+        bool mToDelete = false;
+
     public:
         /**
          * A basic constructor
-         * @param id The vertex's index
          * @param coords The vertex's coordinates
          * @param edge The edge we'll store
         */
-        Vertex(int id, maths::Vector3* coords = nullptr, mesh::Edge* edge = nullptr){
-            mId = id;
+        Vertex(maths::Vector3* coords = nullptr, mesh::Edge* edge = nullptr){
             mCoords = coords;
             mEdge = edge;
         };
+
+        /**
+         * Cast a vertex into a printable string
+         * @return The vertex as a string
+        */
+        std::string toString();
+
+        /**
+         * Print a vertex
+        */
+        void print();
 };
 
 }
