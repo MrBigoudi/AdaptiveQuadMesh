@@ -163,20 +163,7 @@ std::vector<std::vector<mesh::Vertex *>> mesh::Mesh::verticesOfFaces(){
 	std::vector<std::vector<mesh::Vertex *>> vertices(mFaces.size());
 
 	for (int i = 0; i < int(mFaces.size()); i++)
-	{
-		mesh::Face *f = mFaces[i];
-		mesh::Edge *e0 = f->mEdge;
-		mesh::Edge *edge = e0;
-
-		// find all the edges related to the face
-		do
-		{
-			if (edge->mFaceRight == f)
-				edge = edge->mEdgeRightCW;
-			vertices[i].push_back(edge->mVertexOrigin);
-		} 
-		while (edge != e0);
-	}
+		vertices[i] = mFaces[i]->getSurroundingVertices();
 
 	return vertices;
 }
@@ -304,19 +291,16 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 		// edge->print();
 		removeFaceFromList(rightFace);
 		// edge->print();
+		mNbFaces--;
 
 		// adding the new face to the list
 		mFaces.push_back(newFace);
 	}
 
 	// fixing edges
-	// edge->updateAllNeighbours();
-	// merge LCW and RCCW edges
-	// merge LCCW and RCW edges
+	edge->updateAllNeighbours();
 	removeEdgeFromList(edge);
 
-	// updating counters
-	mNbFaces--;
 	mNbEdges--;
 }
 
@@ -392,22 +376,21 @@ std::vector<std::string> mesh::Mesh::toString(){
 
 void mesh::Mesh::print(){
 	std::vector<std::string> strings = toString();
-	int nbVert = int(mVertices.size());
-	int nbFace = int(mFaces.size());
-	int nbEdge = int(mEdges.size());
 
-	fprintf(stdout, "\n\nMesh:\n\nVertices:\n");
-	for (int i=0; i<nbVert; i++){
+	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+
+	fprintf(stdout, "\n\nVertices:\n");
+	for (int i=0; i<mNbVertices; i++){
 		fprintf(stdout, "%s\n", strings[i].c_str());
 	}
 
 	fprintf(stdout, "\n\nFaces:\n");
-	for (int i=0; i<nbFace; i++){
-		fprintf(stdout, "%s\n", strings[i+nbVert].c_str());
+	for (int i=0; i<mNbFaces; i++){
+		fprintf(stdout, "%s\n", strings[i+mNbVertices].c_str());
 	}
 
 	fprintf(stdout, "\n\nEdges:\n");
-	for (int i=0; i<nbEdge; i++){
-		fprintf(stdout, "%s\n", strings[i+nbVert+nbFace].c_str());
+	for (int i=0; i<mNbEdges; i++){
+		fprintf(stdout, "%s\n", strings[i+mNbVertices+mNbFaces].c_str());
 	}
 }

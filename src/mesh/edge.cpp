@@ -67,3 +67,15 @@ std::vector<mesh::Edge*> mesh::Edge::getReversedEdges(std::vector<mesh::Edge*> e
     }
     return reversedEdges;
 }
+
+
+void mesh::Edge::updateAllNeighbours(){
+    if(mEdgeLeftCCW->mEdgeLeftCW->mId == mId)
+        mEdgeLeftCCW->mEdgeLeftCW = mEdgeRightCW;
+    if(mEdgeLeftCW->mEdgeLeftCCW->mId == mId)
+        mEdgeLeftCW->mEdgeLeftCCW = mEdgeRightCCW;
+    if(mEdgeRightCCW->mEdgeRightCW->mId == mId)
+        mEdgeRightCCW->mEdgeRightCW = mEdgeLeftCW;
+    if(mEdgeRightCW->mEdgeRightCCW->mId == mId)
+        mEdgeRightCW->mEdgeRightCCW = mEdgeLeftCCW;
+}

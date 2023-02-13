@@ -3,12 +3,16 @@
 #include <vector>
 #include <string>
 
-#include "vertex.hpp"
 #include "face.hpp"
+#include "vertex.hpp"
 #include "edge.hpp"
 #include "vector3.hpp"
 
 namespace mesh{
+
+class Vertex;
+class Face;
+class Edge;
 
 /**
  * The mesh class using winged mesh representation

@@ -130,13 +130,6 @@ class Edge{
         static int getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);
 
         /**
-         * Get a list of all the vertices from edges surrounding a face
-         * @param edgeList A list of chained edges surrounding a face 
-         * @return The list of the vertices the edges go through
-        */
-        static std::vector<mesh::Vertex*> getVertFromSurrEdges(std::vector<mesh::Edge*> edgeList);
-
-        /**
          * Get the edge position of one edge compare to another
          * @param edgeLookingFor The edge for which we want to find the position
          * @return The position of the edge we're looking for within the current edge
@@ -160,6 +153,19 @@ class Edge{
          * @return A list of the reversed edges
         */
         static std::vector<mesh::Edge*> getReversedEdges(std::vector<mesh::Edge*> edgeList);
+
+        /**
+         * Update all the edges' neighbours before its removal
+        */
+        void updateAllNeighbours();
+
+    private:
+        /**
+         * Get a list of all the vertices from edges surrounding a face
+         * @param edgeList A list of chained edges surrounding a face 
+         * @return The list of the vertices the edges go through
+        */
+        static std::vector<mesh::Vertex*> getVertFromSurrEdges(std::vector<mesh::Edge*> edgeList);
 };
 
 }

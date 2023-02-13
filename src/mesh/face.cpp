@@ -35,6 +35,18 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(){
     return directTurn;
 }
 
+std::vector<mesh::Vertex*> mesh::Face::getSurroundingVertices(){
+    std::vector<mesh::Vertex*> surVertices;
+    std::vector<mesh::Edge*>surEdges = getSurroundingEdges(mEdge);
+    // print();
+    for(int i=0; i<int(surEdges.size()); i++){
+        // surEdges[i]->mVertexOrigin->print();
+        surVertices.push_back(surEdges[i]->mVertexOrigin);
+    }
+    return surVertices;
+}
+
+
 mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
     mesh::Face* newFace = new Face();
     newFace->mEdge = mEdge;

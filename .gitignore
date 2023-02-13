@@ -33,3 +33,4 @@
 # Unwanted files
 compile_commands.json
 .cache
+bin/

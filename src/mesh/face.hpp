@@ -1,9 +1,12 @@
 #pragma once
 
 #include "edge.hpp"
+#include "vertex.hpp"
 #include <vector>
 
 namespace mesh{
+
+class Vertex;
 
 class Edge;
 
@@ -57,8 +60,15 @@ class Face{
 
         /**
          * Get a list of all edges surrounding the face
+         * @return The list of all the edges arround the face (including reversed edges)
         */
         std::vector<mesh::Edge*> getSurroundingEdges();
+
+        /**
+         * Get a list of all vertices surrounding the face
+         * @return The list of all vertices arround the face
+        */
+        std::vector<mesh::Vertex*> getSurroundingVertices();
 
         /**
          * Merge two faces
