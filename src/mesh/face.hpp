@@ -88,6 +88,12 @@ class Face{
         */
         void print();
 
+        /**
+         * Check if the face is a triangle
+         * @return True if it is a triangle, false otherwise
+        */
+        bool isTriangle();
+
 };
 
 }

@@ -87,14 +87,6 @@ class Mesh{
         static Mesh loadOBJ(std::string file);
 
         /**
-         * Create a mesh from vertices and faces of an obj file
-         * @param vertices The vertices from the obj file
-         * @param faces The faces from the obj file
-         * @return A new mesh
-        */
-        static mesh::Mesh objToMesh(std::vector<maths::Vector3*> &vertices, std::vector<std::vector<int>> &faces);
-
-        /**
          * Create an obj file from a mesh
          * @param file The produced file
          * @exception Invalid_Argument if the file is not correct
@@ -102,43 +94,9 @@ class Mesh{
         void toObj(std::string file);
 
         /**
-         * Extract the vertices from the mesh's faces
-         * @return A matrix of vertices
-        */
-        std::vector<std::vector<mesh::Vertex*>> verticesOfFaces();
-
-        /**
          * Transform a triangular mesh into a quad one
         */
         void triToQuad();
-
-        /**
-         * Mark the edges to remove to transform a triangular mesh into a quad one
-        */
-        void triToQuadRemovalMarkingPhase();
-
-        /**
-         * Remove all marked edges
-        */
-        void removeMarkedEdges();
-
-        /**
-         * Remove an edge
-         * @param edge The edge to be removed from the mesh
-        */
-        void removeEdge(mesh::Edge* edge);
-
-        /**
-         * Remove a face from the list
-         * @param face The face to remove
-        */
-        void removeFaceFromList(mesh::Face* face);
-
-        /**
-         * Remove an edge from the list
-         * @param edge The edge to remove
-        */
-        void removeEdgeFromList(mesh::Edge* edge);
 
         /**
          * Cast the mesh into a list of printable strings
@@ -168,6 +126,138 @@ class Mesh{
          * Print the mesh in the standard output
         */
         void print();
+
+
+    private:
+        /**
+         * Create a mesh from vertices and faces of an obj file
+         * @param vertices The vertices from the obj file
+         * @param faces The faces from the obj file
+         * @return A new mesh
+        */
+        static mesh::Mesh objToMesh(std::vector<maths::Vector3*> &vertices, std::vector<std::vector<int>> &faces);
+
+        /**
+         * Extract the vertices from the mesh's faces
+         * @return A matrix of vertices
+        */
+        std::vector<std::vector<mesh::Vertex*>> verticesOfFaces();
+
+        /**
+         * Mark the edges to remove to transform a triangular mesh into a quad one
+        */
+        void triToQuadRemovalMarkingPhase();
+
+        /**
+         * Transform a quad-dominant mesh into a real triangular mesh
+        */
+	    void triToPureQuad();
+
+        /**
+         * Remove all marked edges
+        */
+        void removeMarkedEdges();
+
+        /**
+         * Remove an edge
+         * @param edge The edge to be removed from the mesh
+        */
+        void removeEdge(mesh::Edge* edge);
+
+        /**
+         * Remove a face from the list
+         * @param face The face to remove
+        */
+        void removeFaceFromList(mesh::Face* face);
+
+        /**
+         * Remove an edge from the list
+         * @param edge The edge to remove
+        */
+        void removeEdgeFromList(mesh::Edge* edge);
+
+        /**
+         * Get a triangle face from the mesh
+         * @return The triangle or nullptr if there are none
+        */
+        mesh::Face* getTriangle();
+
+        /**
+         * Count the number of triangles in the mesh
+         * @return The number of triangles
+        */
+        int howManyTriangles();
+
+        /**
+         * Transform a triangle into 3 quads
+         * @param triangle The triangle to change
+        */
+        void subdivideTriangle(mesh::Face* triangle);
+
+        /**
+         * Create the new elements for subdividing a triangle
+         * @param triangle The triangle we want to remove
+         * @param newVertices A reference to the newly created vertices
+         * @param newEdges A reference to the newly created edges
+         * @param newFaces A reference to the newly created faces
+        */
+        void createQuads(mesh::Face* triangle, 
+            std::vector<mesh::Vertex*> &newVertices, 
+            std::vector<mesh::Edge*> &newEdges, 
+            std::vector<mesh::Face*> & newFaces
+        );
+
+        /**
+         * Initialize the new elements for subdividing a triangle
+         * @param triangle The triangle we want to remove
+         * @param newVertices A reference to the newly created vertices
+         * @param newEdges A reference to the newly created edges
+         * @param newFaces A reference to the newly created faces
+        */
+        void initQuads(mesh::Face* triangle,
+            std::vector<mesh::Vertex*> &newVertices, 
+            std::vector<mesh::Edge*> &newEdges, 
+            std::vector<mesh::Face*> & newFaces
+        );
+
+        /**
+         * Initiate the edges arround the triangle
+         * @param newVertices A reference to the newly created vertices
+         * @param newEdges A reference to the newly created edges
+         * @param newFaces A reference to the newly created faces
+         * @param oldVertices A reference to the old vertices surrounding the triangle
+         * @param oldEdges A reference to the old edges surrounding the triangle
+        */
+        static void initEdgesArroundTriFace(
+            std::vector<mesh::Vertex*> &newVertices, 
+            std::vector<mesh::Edge*> &newEdges, 
+            std::vector<mesh::Face*> & newFaces,
+            std::vector<mesh::Vertex*> & oldVertices,
+            std::vector<mesh::Edge*> & oldEdges);
+
+        /**
+         * Initiate the edges inside the triangle
+         * @param newVertices A reference to the newly created vertices
+         * @param newEdges A reference to the newly created edges
+         * @param newFaces A reference to the newly created faces
+        */
+        static void initEdgesInsideTriFace(
+            std::vector<mesh::Vertex*> &newVertices, 
+            std::vector<mesh::Edge*> &newEdges, 
+            std::vector<mesh::Face*> & newFaces);
+
+        /**
+         * Initiate the reversed edges of the triangle
+         * @param newEdges A reference to the newly created edges
+        */
+        static void initReversedEdgesTriFace(std::vector<mesh::Edge*> &newEdges);
+
+
+        /**
+         * Get the list of all edges to delete
+         * @return The edges as a vector list
+        */
+        std::vector<mesh::Edge*> getAllEdgesToDelete();
 
 };
 

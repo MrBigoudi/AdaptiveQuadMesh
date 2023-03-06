@@ -52,7 +52,7 @@ std::string mesh::Edge::toString(){
     char buffer[256];
     sprintf(buffer, "e%d -> lcw%d, lccw%d, rcw%d, rccw%d, vo%d, vd%d, fl%d, fr%d, rev%d, toDel = %d", 
             mId, mEdgeLeftCW->mId, mEdgeLeftCCW->mId, mEdgeRightCW->mId, mEdgeRightCCW->mId, 
-            mVertexOrigin->mId, mVertexDestination->mId, mFaceLeft->mId, mFaceRight->mId, mReverseEdge->mId ,mToDelete);
+            mVertexOrigin->mId, mVertexDestination->mId, mFaceLeft->mId, mFaceRight->mId, mReverseEdge->mId, mToDelete);
     return buffer;
 }
 
@@ -78,4 +78,15 @@ void mesh::Edge::updateAllNeighbours(){
         mEdgeRightCCW->mEdgeRightCW = mEdgeLeftCW;
     if(mEdgeRightCW->mEdgeRightCCW->mId == mId)
         mEdgeRightCW->mEdgeRightCCW = mEdgeLeftCCW;
+}
+
+void mesh::Edge::createReversed(mesh::Edge* edge){
+    edge->mVertexOrigin = mVertexDestination;
+    edge->mVertexDestination = mVertexOrigin;
+    edge->mFaceLeft = mFaceRight;
+    edge->mFaceRight = mFaceLeft;
+    edge->mEdgeRightCCW = mEdgeLeftCCW->mReverseEdge;
+    edge->mEdgeRightCW = mEdgeLeftCW->mReverseEdge;
+    edge->mEdgeLeftCCW = mEdgeRightCCW->mReverseEdge;
+    edge->mEdgeLeftCW = mEdgeRightCW->mReverseEdge;
 }

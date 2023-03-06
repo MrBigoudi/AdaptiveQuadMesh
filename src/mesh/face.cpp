@@ -12,6 +12,7 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdg
     mesh::Edge* curEdge = e0;
 
     do{
+        // curEdge->print();
         surEdges.push_back(curEdge);
         if (curEdge->mFaceLeft->mId == mId){
         	curEdge = curEdge->mEdgeLeftCW;
@@ -86,4 +87,8 @@ std::string mesh::Face::toString(){
 
 void mesh::Face::print(){
     fprintf(stdout, "%s\n", toString().c_str());
+}
+
+bool mesh::Face::isTriangle(){
+    return (getSurroundingEdges().size() == 6);
 }

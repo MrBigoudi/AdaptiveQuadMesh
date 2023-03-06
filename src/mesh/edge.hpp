@@ -159,6 +159,12 @@ class Edge{
         */
         void updateAllNeighbours();
 
+        /**
+         * Inititate a given edge as the reversed of the current one
+         * @param edge The edge to initiate
+        */
+        void createReversed(mesh::Edge* edge);
+
     private:
         /**
          * Get a list of all the vertices from edges surrounding a face
