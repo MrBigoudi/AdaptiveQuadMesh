@@ -47,7 +47,7 @@ class Face{
          * Get a list of all edges surrounding the face given the starting point
          * @param startingEdge The edge where to start the loop
         */
-        std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge);
+        std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge) const;
 
     public:
         /**
@@ -59,16 +59,22 @@ class Face{
         };
 
         /**
-         * Get a list of all edges surrounding the face
+         * Get a list of all edges surrounding the current face
          * @return The list of all the edges arround the face (including reversed edges)
         */
-        std::vector<mesh::Edge*> getSurroundingEdges();
+        std::vector<mesh::Edge*> getSurroundingEdges() const;
 
         /**
-         * Get a list of all vertices surrounding the face
+         * Get a list of all vertices surrounding the current face
          * @return The list of all vertices arround the face
         */
-        std::vector<mesh::Vertex*> getSurroundingVertices();
+        std::vector<mesh::Vertex*> getSurroundingVertices() const;
+
+        /**
+         * Get a list of all faces surrounding the current face
+         * @return The list of all faces arround the face
+        */
+        std::vector<mesh::Face*> getSurroundingFaces() const;
 
         /**
          * Merge two faces
@@ -81,18 +87,30 @@ class Face{
          * Cast a face into a printable string
          * @return The face as a string
         */
-        std::string toString();
+        std::string toString() const;
 
         /**
          * Print a face
         */
-        void print();
+        void print() const;
 
         /**
          * Check if the face is a triangle
          * @return True if it is a triangle, false otherwise
         */
-        bool isTriangle();
+        bool isTriangle() const;
+
+        /**
+         * Check if the face is a quad
+         * @return True if it is a quad, false otherwise
+        */
+        bool isQuad() const;
+
+        /**
+         * Check if the face is dividable into a quad without causing surrounding faces to become more than quads
+         * @return True if it is a dividable, false otherwise
+        */
+        bool isDividable() const;
 
 };
 

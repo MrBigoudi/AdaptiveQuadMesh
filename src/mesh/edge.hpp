@@ -80,6 +80,11 @@ class Edge{
         */
         int mId = (mesh::Edge::ID_CPT++);
 
+        /**
+         * The sum of pariwised dot product
+        */
+        float mSumDotProd;
+
 
     public:
         /**
@@ -127,7 +132,14 @@ class Edge{
          * @param edgeList A list of chained edges surrounding a face 
          * @return The sum of the dot products
         */
-        static int getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);
+        static float getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);
+
+        /**
+         * Get the perimeter of edges surrounding a face
+         * @param edgeList A list of chained edges surrounding a face 
+         * @return The perimeter of the face
+        */
+        static float getPerimeter(std::vector<mesh::Edge*> edgeList);
 
         /**
          * Get the edge position of one edge compare to another
@@ -135,6 +147,12 @@ class Edge{
          * @return The position of the edge we're looking for within the current edge
         */
         mesh::EdgePos getEdgePos(mesh::Edge* edgeLookingFor);
+
+        /**
+         * Get the length of an edge
+         * @return The length as a float
+        */
+        float getLength() const;
 
         /**
          * Cast an edge into a printable string
@@ -164,6 +182,14 @@ class Edge{
          * @param edge The edge to initiate
         */
         void createReversed(mesh::Edge* edge);
+
+        /**
+         * Compare two edges in term of their pairwised dot product sum
+         * @param e1 The first edge
+         * @param e2 The second edge
+         * @return True if the first edge is lesser than the second one
+        */
+        static bool cmp(const mesh::Edge &e1, const mesh::Edge &e2);
 
     private:
         /**

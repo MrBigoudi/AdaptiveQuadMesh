@@ -5,15 +5,17 @@
 
 int mesh::Face::ID_CPT = 0;
 
-std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdge){
+std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdge) const{
     std::vector<mesh::Edge*> surEdges;
 
     mesh::Edge* e0 = startingEdge;
     mesh::Edge* curEdge = e0;
 
+    // printf("\n\nBeg Do While:\ne0: %d\n", e0->mId);
     do{
         // curEdge->print();
         surEdges.push_back(curEdge);
+        // printf("curEdge: %d, e0: %d\n", curEdge->mId, e0->mId);
         if (curEdge->mFaceLeft->mId == mId){
         	curEdge = curEdge->mEdgeLeftCW;
         }else if (curEdge->mFaceRight->mId == mId){
@@ -22,11 +24,12 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdg
             assert(false);
         }
     }while(curEdge->mId != e0->mId);
+    // printf("\n\nEnd Do While:\n\n\n\n");
 
     return surEdges;
 }
 
-std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(){
+std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges() const{
     // print();
     std::vector<mesh::Edge*> directTurn = getSurroundingEdges(mEdge);
     // print();
@@ -36,7 +39,7 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(){
     return directTurn;
 }
 
-std::vector<mesh::Vertex*> mesh::Face::getSurroundingVertices(){
+std::vector<mesh::Vertex*> mesh::Face::getSurroundingVertices() const{
     std::vector<mesh::Vertex*> surVertices;
     std::vector<mesh::Edge*>surEdges = getSurroundingEdges(mEdge);
     // print();
@@ -45,6 +48,18 @@ std::vector<mesh::Vertex*> mesh::Face::getSurroundingVertices(){
         surVertices.push_back(surEdges[i]->mVertexOrigin);
     }
     return surVertices;
+}
+
+
+std::vector<mesh::Face*> mesh::Face::getSurroundingFaces() const{
+    std::vector<mesh::Face*> surFaces;
+    std::vector<mesh::Edge*>surEdges = getSurroundingEdges(mEdge);
+    // print();
+    for(int i=0; i<int(surEdges.size()); i++){
+        if(surEdges[i]->mFaceRight->mId != mId)
+            surFaces.push_back(surEdges[i]->mFaceRight);
+    }
+    return surFaces;
 }
 
 
@@ -79,16 +94,30 @@ mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
     return newFace;
 }
 
-std::string mesh::Face::toString(){
+std::string mesh::Face::toString() const{
     char buffer[50];
     sprintf(buffer, "f%d -> e%d, toDel = %d, toMerge = %d", mId, mEdge->mId, mToDelete, mToMerge);
     return buffer;
 }
 
-void mesh::Face::print(){
+void mesh::Face::print() const{
     fprintf(stdout, "%s\n", toString().c_str());
 }
 
-bool mesh::Face::isTriangle(){
+bool mesh::Face::isTriangle() const{
     return (getSurroundingEdges().size() == 6);
+}
+
+bool mesh::Face::isQuad() const {
+    return (getSurroundingEdges().size() == 8);
+}
+
+bool mesh::Face::isDividable() const {
+    // all surrounding faces are triangle
+    std::vector<mesh::Face*> surFaces = getSurroundingFaces();
+    for(int i=0; i<int(surFaces.size()); i++){
+        if(!surFaces[i]->isTriangle())
+            return false;
+    }
+    return true;
 }

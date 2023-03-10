@@ -35,3 +35,4 @@ compile_commands.json
 .cache
 bin/
 produced*.obj
+media/objects/common*

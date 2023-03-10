@@ -9,15 +9,30 @@ bool mesh::Edge::isRemovable(){
     return (!this->mFaceLeft->mToMerge) && (!this->mFaceRight->mToMerge); 
 }
 
-int mesh::Edge::getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList){
+float mesh::Edge::getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList){
     std::vector<mesh::Vertex*> vertexList = mesh::Edge::getVertFromSurrEdges(edgeList);
-    int sum = 0;
+    float sum = 0;
 
     for(int i=0; i<int(vertexList.size()-1); i++){
         sum += maths::Vector3::dot(vertexList[i]->mCoords, vertexList[i+1]->mCoords);
     }
 
     return sum;
+}
+
+float mesh::Edge::getPerimeter(std::vector<mesh::Edge*> edgeList){
+    std::vector<mesh::Vertex*> vertexList = mesh::Edge::getVertFromSurrEdges(edgeList);
+    float perimeter = 0;
+
+    for(int i=0; i<int(vertexList.size()-1); i++){
+        perimeter += maths::Vector3::distance(vertexList[i]->mCoords, vertexList[i+1]->mCoords);
+    }
+
+    return perimeter;
+}
+
+float mesh::Edge::getLength() const {
+    return maths::Vector3::distance(mVertexOrigin->mCoords, mVertexDestination->mCoords);
 }
 
 std::vector<mesh::Vertex*> mesh::Edge::getVertFromSurrEdges(std::vector<mesh::Edge*> edgeList){
@@ -71,13 +86,13 @@ std::vector<mesh::Edge*> mesh::Edge::getReversedEdges(std::vector<mesh::Edge*> e
 
 void mesh::Edge::updateAllNeighbours(){
     if(mEdgeLeftCCW->mEdgeLeftCW->mId == mId)
-        mEdgeLeftCCW->mEdgeLeftCW = mEdgeRightCW;
+        mEdgeLeftCCW->mEdgeLeftCW = mEdgeRightCW->mReverseEdge;
     if(mEdgeLeftCW->mEdgeLeftCCW->mId == mId)
-        mEdgeLeftCW->mEdgeLeftCCW = mEdgeRightCCW;
+        mEdgeLeftCW->mEdgeLeftCCW = mEdgeRightCCW->mReverseEdge;
     if(mEdgeRightCCW->mEdgeRightCW->mId == mId)
-        mEdgeRightCCW->mEdgeRightCW = mEdgeLeftCW;
+        mEdgeRightCCW->mEdgeRightCW = mEdgeLeftCW->mReverseEdge;
     if(mEdgeRightCW->mEdgeRightCCW->mId == mId)
-        mEdgeRightCW->mEdgeRightCCW = mEdgeLeftCCW;
+        mEdgeRightCW->mEdgeRightCCW = mEdgeLeftCCW->mReverseEdge;
 }
 
 void mesh::Edge::createReversed(mesh::Edge* edge){
@@ -89,4 +104,9 @@ void mesh::Edge::createReversed(mesh::Edge* edge){
     edge->mEdgeRightCW = mEdgeLeftCW->mReverseEdge;
     edge->mEdgeLeftCCW = mEdgeRightCCW->mReverseEdge;
     edge->mEdgeLeftCW = mEdgeRightCW->mReverseEdge;
+}
+
+
+bool mesh::Edge::cmp(const mesh::Edge &e1, const mesh::Edge &e2){
+    return e1.mSumDotProd < e2.mSumDotProd;
 }

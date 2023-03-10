@@ -259,6 +259,15 @@ class Mesh{
         */
         std::vector<mesh::Edge*> getAllEdgesToDelete();
 
+        /**
+         * Test if the possible edges have already been visited
+         * @param face The face as a list of integers (willl be modified)
+         * @param edgeTable The list of already visited edges
+         * @param position The index of the currently tried position
+         * @return True if at least one of the edges has already been visited
+        */
+        static bool edgesAlreadyVisited(std::vector<int> & face, const std::vector<std::vector<int>> & edgeTable, int position);
+
 };
 
 }
