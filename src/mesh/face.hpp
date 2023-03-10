@@ -42,6 +42,11 @@ class Face{
         */
         int mId = (mesh::Face::ID_CPT++);
 
+        /**
+         * Flag to know it the face is a triangle
+        */
+        bool mIsTriangle = true;
+
     private:
         /**
          * Get a list of all edges surrounding the face given the starting point
@@ -106,11 +111,18 @@ class Face{
         */
         bool isQuad() const;
 
+        // /**
+        //  * Check if the face is dividable into a quad without causing surrounding faces to become more than quads
+        //  * @return True if it is a dividable, false otherwise
+        // */
+        // bool isDividable() const;
+
         /**
-         * Check if the face is dividable into a quad without causing surrounding faces to become more than quads
-         * @return True if it is a dividable, false otherwise
+         * Get the edge between two given faces
+         * @param face The second face
+         * @return The edge between the current face and the given one (nullptr if no such edge exists)
         */
-        bool isDividable() const;
+        mesh::Edge* getEdgeBetween(mesh::Face* face) const;
 
 };
 

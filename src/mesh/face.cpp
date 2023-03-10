@@ -90,13 +90,14 @@ mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
         if (surEdgeFace[i]->mFaceRight->mId == face->mId) surEdgeFace[i]->mFaceRight = newFace;
     }
     // printf("sur edges f1 done\n");
+    newFace->mIsTriangle = false;
 
     return newFace;
 }
 
 std::string mesh::Face::toString() const{
     char buffer[50];
-    sprintf(buffer, "f%d -> e%d, toDel = %d, toMerge = %d", mId, mEdge->mId, mToDelete, mToMerge);
+    sprintf(buffer, "f%d -> e%d, toDel = %d, toMerge = %d, isTriangle: %d", mId, mEdge->mId, mToDelete, mToMerge, mIsTriangle);
     return buffer;
 }
 
@@ -105,19 +106,40 @@ void mesh::Face::print() const{
 }
 
 bool mesh::Face::isTriangle() const{
-    return (getSurroundingEdges().size() == 6);
+    return mIsTriangle;
 }
 
 bool mesh::Face::isQuad() const {
-    return (getSurroundingEdges().size() == 8);
+    return !isTriangle();
 }
 
-bool mesh::Face::isDividable() const {
-    // all surrounding faces are triangle
-    std::vector<mesh::Face*> surFaces = getSurroundingFaces();
-    for(int i=0; i<int(surFaces.size()); i++){
-        if(!surFaces[i]->isTriangle())
-            return false;
+// bool mesh::Face::isDividable() const {
+//     // all surrounding faces are triangle
+//     std::vector<mesh::Face*> surFaces = getSurroundingFaces();
+//     for(int i=0; i<int(surFaces.size()); i++){
+//         if(!surFaces[i]->isTriangle())
+//             return false;
+//     }
+//     return true;
+// }
+
+mesh::Edge* mesh::Face::getEdgeBetween(mesh::Face* face) const{
+    std::vector<mesh::Edge*> surEdges = getSurroundingEdges();
+    int f2Id = face->mId;
+
+    // printf("\n\nEdge between:\nface:\n");
+    // face->print();
+
+    for(int i=0; i<int(surEdges.size()); i++){
+        mesh::Edge* curEdge = surEdges[i];
+        // printf("\ncurEdge:\n");
+        // curEdge->print();
+
+        if( (curEdge->mFaceLeft->mId == mId && curEdge->mFaceRight->mId == f2Id)
+            || (curEdge->mFaceLeft->mId == f2Id && curEdge->mFaceRight->mId == mId)){
+                return curEdge;
+        }
     }
-    return true;
+
+    return nullptr;
 }

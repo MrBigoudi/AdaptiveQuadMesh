@@ -102,30 +102,30 @@ class Mesh{
          * Cast the mesh into a list of printable strings
          * @return The mesh as a string vector
         */
-        std::vector<std::string> toString();
+        std::vector<std::string> toString() const;
 
         /**
          * Cast the mesh's vertices into a list of printable strings
          * @return The vertices as a string vector
         */
-        std::vector<std::string> verticesToString();
+        std::vector<std::string> verticesToString() const;
 
         /**
          * Cast the mesh's faces into a list of printable strings
          * @return The faces as a string vector
         */
-        std::vector<std::string> facesToString();
+        std::vector<std::string> facesToString() const;
 
         /**
          * Cast the mesh's edges into a list of printable strings
          * @return The edges as a string vector
         */
-        std::vector<std::string> edgesToString();
+        std::vector<std::string> edgesToString() const;
 
         /**
          * Print the mesh in the standard output
         */
-        void print();
+        void print() const;
 
 
     private:
@@ -148,10 +148,11 @@ class Mesh{
         */
         void triToQuadRemovalMarkingPhase();
 
-        /**
-         * Transform a quad-dominant mesh into a real triangular mesh
-        */
-	    void triToPureQuad();
+        // /**
+        //  * Mark the edges to delete to transform a quad-dominant mesh into a real triangular mesh, 
+        //  * using catmull-clark subdivision on the remaining triangles
+        // */
+	    // void triToPureQuadMarkingPhase();
 
         /**
          * Remove all marked edges
@@ -176,81 +177,107 @@ class Mesh{
         */
         void removeEdgeFromList(mesh::Edge* edge);
 
+        // /**
+        //  * Get the list of triangle faces from the mesh
+        //  * @return The triangles as a list
+        // */
+        // std::vector<mesh::Face*> getTriangles();
+
         /**
-         * Get a triangle face from the mesh
-         * @return The triangle or nullptr if there are none
+         * Get one of the remaining triangles in the mesh
+         * @return The face of the triangle (nullptr if there are no triangles left)
         */
-        mesh::Face* getTriangle();
+        mesh::Face* getTriangle() const;
 
         /**
          * Count the number of triangles in the mesh
          * @return The number of triangles
         */
-        int howManyTriangles();
+        int howManyTriangles() const;
 
         /**
-         * Transform a triangle into 3 quads
-         * @param triangle The triangle to change
+         * Transform a quad dominant mesh into a pure quad one
         */
-        void subdivideTriangle(mesh::Face* triangle);
+        void triToPureQuad();
 
         /**
-         * Create the new elements for subdividing a triangle
-         * @param triangle The triangle we want to remove
-         * @param newVertices A reference to the newly created vertices
-         * @param newEdges A reference to the newly created edges
-         * @param newFaces A reference to the newly created faces
+         * Get the path of faces to reach the closest triangle using a BFS
+         * @param triOrigin The triangle from where to start
+         * @return The path as a list of faces (assert false if triOrigin is the last triangle)
         */
-        void createQuads(mesh::Face* triangle, 
-            std::vector<mesh::Vertex*> &newVertices, 
-            std::vector<mesh::Edge*> &newEdges, 
-            std::vector<mesh::Face*> & newFaces
-        );
+        std::vector<mesh::Face*> pathToClosestTriangle(mesh::Face* triangle) const;
 
         /**
-         * Initialize the new elements for subdividing a triangle
-         * @param triangle The triangle we want to remove
-         * @param newVertices A reference to the newly created vertices
-         * @param newEdges A reference to the newly created edges
-         * @param newFaces A reference to the newly created faces
+         * Create an edge in separating a given faace through tow given vertices
+         * @param face The face to split
+         * @param v1 The first vertex the new edge will go through
+         * @param v2 The second vertex the new edge will go through
         */
-        void initQuads(mesh::Face* triangle,
-            std::vector<mesh::Vertex*> &newVertices, 
-            std::vector<mesh::Edge*> &newEdges, 
-            std::vector<mesh::Face*> & newFaces
-        );
+        void createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2);
 
-        /**
-         * Initiate the edges arround the triangle
-         * @param newVertices A reference to the newly created vertices
-         * @param newEdges A reference to the newly created edges
-         * @param newFaces A reference to the newly created faces
-         * @param oldVertices A reference to the old vertices surrounding the triangle
-         * @param oldEdges A reference to the old edges surrounding the triangle
-        */
-        static void initEdgesArroundTriFace(
-            std::vector<mesh::Vertex*> &newVertices, 
-            std::vector<mesh::Edge*> &newEdges, 
-            std::vector<mesh::Face*> & newFaces,
-            std::vector<mesh::Vertex*> & oldVertices,
-            std::vector<mesh::Edge*> & oldEdges);
+        // /**
+        //  * Transform a triangle into 3 quads
+        //  * @param triangle The triangle to change
+        // */
+        // void subdivideTriangle(mesh::Face* triangle);
 
-        /**
-         * Initiate the edges inside the triangle
-         * @param newVertices A reference to the newly created vertices
-         * @param newEdges A reference to the newly created edges
-         * @param newFaces A reference to the newly created faces
-        */
-        static void initEdgesInsideTriFace(
-            std::vector<mesh::Vertex*> &newVertices, 
-            std::vector<mesh::Edge*> &newEdges, 
-            std::vector<mesh::Face*> & newFaces);
+        // /**
+        //  * Create the new elements for subdividing a triangle
+        //  * @param triangle The triangle we want to remove
+        //  * @param newVertices A reference to the newly created vertices
+        //  * @param newEdges A reference to the newly created edges
+        //  * @param newFaces A reference to the newly created faces
+        // */
+        // void createQuads(mesh::Face* triangle, 
+        //     std::vector<mesh::Vertex*> &newVertices, 
+        //     std::vector<mesh::Edge*> &newEdges, 
+        //     std::vector<mesh::Face*> & newFaces
+        // );
 
-        /**
-         * Initiate the reversed edges of the triangle
-         * @param newEdges A reference to the newly created edges
-        */
-        static void initReversedEdgesTriFace(std::vector<mesh::Edge*> &newEdges);
+        // /**
+        //  * Initialize the new elements for subdividing a triangle
+        //  * @param triangle The triangle we want to remove
+        //  * @param newVertices A reference to the newly created vertices
+        //  * @param newEdges A reference to the newly created edges
+        //  * @param newFaces A reference to the newly created faces
+        // */
+        // void initQuads(mesh::Face* triangle,
+        //     std::vector<mesh::Vertex*> &newVertices, 
+        //     std::vector<mesh::Edge*> &newEdges, 
+        //     std::vector<mesh::Face*> & newFaces
+        // );
+
+        // /**
+        //  * Initiate the edges arround the triangle
+        //  * @param newVertices A reference to the newly created vertices
+        //  * @param newEdges A reference to the newly created edges
+        //  * @param newFaces A reference to the newly created faces
+        //  * @param oldVertices A reference to the old vertices surrounding the triangle
+        //  * @param oldEdges A reference to the old edges surrounding the triangle
+        // */
+        // static void initEdgesArroundTriFace(
+        //     std::vector<mesh::Vertex*> &newVertices, 
+        //     std::vector<mesh::Edge*> &newEdges, 
+        //     std::vector<mesh::Face*> & newFaces,
+        //     std::vector<mesh::Vertex*> & oldVertices,
+        //     std::vector<mesh::Edge*> & oldEdges);
+
+        // /**
+        //  * Initiate the edges inside the triangle
+        //  * @param newVertices A reference to the newly created vertices
+        //  * @param newEdges A reference to the newly created edges
+        //  * @param newFaces A reference to the newly created faces
+        // */
+        // static void initEdgesInsideTriFace(
+        //     std::vector<mesh::Vertex*> &newVertices, 
+        //     std::vector<mesh::Edge*> &newEdges, 
+        //     std::vector<mesh::Face*> & newFaces);
+
+        // /**
+        //  * Initiate the reversed edges of the triangle
+        //  * @param newEdges A reference to the newly created edges
+        // */
+        // static void initReversedEdgesTriFace(std::vector<mesh::Edge*> &newEdges);
 
 
         /**
@@ -267,6 +294,34 @@ class Mesh{
          * @return True if at least one of the edges has already been visited
         */
         static bool edgesAlreadyVisited(std::vector<int> & face, const std::vector<std::vector<int>> & edgeTable, int position);
+
+        // /**
+        //  * Create the middle vertex for the Catmull-Clark subdivision of remaining triangles
+        //  * @param triangle The old triangle to remove
+        //  * @return A new vertex at the barycenter of old triangle
+        // */
+        // mesh::Vertex* triToQuadNewMiddleVertex(mesh::Face* triangle);
+
+        // /**
+        //  * Create the new faces for the Catmull-Clark subdivision of remaining triangles
+        //  * @param triangle The old triangle to remove
+        //  * @return A list of newly created faces
+        // */
+        // std::vector<mesh::Face*> triToQuadNewFaces(mesh::Face* triangle);
+
+        // /**
+        //  * Create the new edges for the Catmull-Clark subdivision of remaining triangles
+        //  * @param triangle The old triangle to remove
+        //  * @param midVertex The middle vertex created at the center of the old triangle
+        //  * @return A list of newly created edges
+        // */
+        // std::vector<mesh::Edge*> triToQuadNewEdges(mesh::Face* triangle, mesh::Vertex* midVertex);
+
+        // /**
+        //  * Remove the old triangle from the mesh and updates old neighbours
+        //  * @param triangle The triangle to remove
+        // */
+        // void triToQuadRemoveOldTriangle(mesh::Face* triangle);
 
 };
 

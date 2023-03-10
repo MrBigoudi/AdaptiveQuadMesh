@@ -5,11 +5,74 @@
 #include <algorithm>
 #include <cassert>
 #include <vector>
+#include <queue>
+#include <map>
 
 #include "edge.hpp"
 #include "face.hpp"
 #include "mesh.hpp"
 #include "vector3.hpp"
+
+std::vector<std::string> mesh::Mesh::verticesToString() const {
+	std::vector<std::string> strings;
+	for(int i=0; i<int(mVertices.size()); i++){
+		strings.push_back(mVertices[i]->toString());
+	}
+	return strings;
+}
+
+std::vector<std::string> mesh::Mesh::facesToString() const {
+	std::vector<std::string> strings;
+	for(int i=0; i<int(mFaces.size()); i++){
+		strings.push_back(mFaces[i]->toString());
+	}
+	return strings;
+}
+
+std::vector<std::string> mesh::Mesh::edgesToString() const {
+	std::vector<std::string> strings;
+	for(int i=0; i<int(mEdges.size()); i++){
+		strings.push_back(mEdges[i]->toString());
+	}
+	return strings;
+}
+
+
+std::vector<std::string> mesh::Mesh::toString() const{
+    std::vector<std::string> vertices = verticesToString();
+    std::vector<std::string> faces = facesToString();
+    std::vector<std::string> edges = edgesToString();
+
+	std::vector<std::string> result;
+	result.reserve(vertices.size() + faces.size() + edges.size());
+	result.insert(result.end(), vertices.begin(), vertices.end());
+	result.insert(result.end(), faces.begin(), faces.end());
+	result.insert(result.end(), edges.begin(), edges.end());
+
+	return result;
+}
+
+
+void mesh::Mesh::print() const{
+	std::vector<std::string> strings = toString();
+
+	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+
+	fprintf(stdout, "\n\nVertices:\n");
+	for (int i=0; i<mNbVertices; i++){
+		fprintf(stdout, "%s\n", strings[i].c_str());
+	}
+
+	fprintf(stdout, "\n\nFaces:\n");
+	for (int i=0; i<mNbFaces; i++){
+		fprintf(stdout, "%s\n", strings[i+mNbVertices].c_str());
+	}
+
+	fprintf(stdout, "\n\nEdges:\n");
+	for (int i=0; i<mNbEdges; i++){
+		fprintf(stdout, "%s\n", strings[i+mNbVertices+mNbFaces].c_str());
+	}
+}
 
 mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
 	std::vector<maths::Vector3*> vertices;
@@ -413,6 +476,7 @@ void mesh::Mesh::removeMarkedEdges(){
 
 
 void mesh::Mesh::triToQuad(){
+	// print();
 	triToQuadRemovalMarkingPhase();
 	// print();
 	removeMarkedEdges();
@@ -422,330 +486,560 @@ void mesh::Mesh::triToQuad(){
 	// subdivide all remaining triangles
 	assert(howManyTriangles() % 2 == 0);
 
+	// triToPureQuadMarkingPhase();
 	triToPureQuad();
+	// removeMarkedEdges();
 	assert(howManyTriangles() == 0);
 }
 
-
-std::vector<std::string> mesh::Mesh::verticesToString(){
-	std::vector<std::string> strings;
-	for(int i=0; i<int(mVertices.size()); i++){
-		strings.push_back(mVertices[i]->toString());
-	}
-	return strings;
-}
-
-std::vector<std::string> mesh::Mesh::facesToString(){
-	std::vector<std::string> strings;
-	for(int i=0; i<int(mFaces.size()); i++){
-		strings.push_back(mFaces[i]->toString());
-	}
-	return strings;
-}
-
-std::vector<std::string> mesh::Mesh::edgesToString(){
-	std::vector<std::string> strings;
-	for(int i=0; i<int(mEdges.size()); i++){
-		strings.push_back(mEdges[i]->toString());
-	}
-	return strings;
-}
-
-
-std::vector<std::string> mesh::Mesh::toString(){
-    std::vector<std::string> vertices = verticesToString();
-    std::vector<std::string> faces = facesToString();
-    std::vector<std::string> edges = edgesToString();
-
-	std::vector<std::string> result;
-	result.reserve(vertices.size() + faces.size() + edges.size());
-	result.insert(result.end(), vertices.begin(), vertices.end());
-	result.insert(result.end(), faces.begin(), faces.end());
-	result.insert(result.end(), edges.begin(), edges.end());
-
-	return result;
-}
-
-
-void mesh::Mesh::print(){
-	std::vector<std::string> strings = toString();
-
-	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
-
-	fprintf(stdout, "\n\nVertices:\n");
-	for (int i=0; i<mNbVertices; i++){
-		fprintf(stdout, "%s\n", strings[i].c_str());
-	}
-
-	fprintf(stdout, "\n\nFaces:\n");
-	for (int i=0; i<mNbFaces; i++){
-		fprintf(stdout, "%s\n", strings[i+mNbVertices].c_str());
-	}
-
-	fprintf(stdout, "\n\nEdges:\n");
-	for (int i=0; i<mNbEdges; i++){
-		fprintf(stdout, "%s\n", strings[i+mNbVertices+mNbFaces].c_str());
-	}
-}
-
-void mesh::Mesh::triToPureQuad(){
-	/**
-	for all triangles
-		create new vertex at center
-		create 3 new faces arround that barycenter
-		remove old triangular face
-
-		mark the old triangular edges as "toDelete"
-	remove these edges
-	*/
-
-
-
-	// get one of the remaining triangles
-	mesh::Face* triangle = getTriangle();
-
-	int nbEdges = mNbEdges;
-	int nbFaces = mNbFaces;
-	int nbVertices = mNbVertices;
-
-	while(triangle != nullptr){
-		// print();
-		// printf("beg while\n");
-		// printf("nbFaces: %d, nbEdges: %d, nbVertices: %d\n", mNbFaces, mNbEdges, mNbVertices);
-		subdivideTriangle(triangle);
-		// printf("end sub\n");
-		assert(mNbEdges == nbEdges + 18 - 6);
-		assert(mNbFaces == nbFaces + 3 - 1);
-		assert(mNbVertices == nbVertices + 4);
-		nbEdges = mNbEdges;
-		nbFaces = mNbFaces;
-		nbVertices = mNbVertices;
-		// printf("get new triangle\n");
-		triangle = getTriangle();
-		// printf("end while\n");
-	};
-	// last check
-	assert(triangle == nullptr);
-}
-
-mesh::Face* mesh::Mesh::getTriangle(){
-	// check for all the mesh's faces if it is a triangle
+mesh::Face* mesh::Mesh::getTriangle() const {
 	for(int i=0; i<mNbFaces; i++){
-		// printf("i: %d\n", i);
-		// mFaces[i]->print();
-		// mFaces[i]->mEdge->print();
-		// print();
-		if(mFaces[i]->isTriangle())
-			return mFaces[i];
+		if(mFaces[i]->isTriangle()) return mFaces[i];
 	}
 	return nullptr;
 }
 
-void mesh::Mesh::subdivideTriangle(mesh::Face* triangle){
-	// create the 4 new vertices
-	std::vector<mesh::Vertex*> newVertices;
-	// create the 18 new edges
-	std::vector<mesh::Edge*> newEdges;
-	// create the 3 new faces
-	std::vector<mesh::Face*> newFaces;
 
-	createQuads(triangle, newVertices, newEdges, newFaces);
-
-	// print newly created elements
-	/**
-	printf("\n\nnew vertices:\n");
-	for(int i=0; i<int(newVertices.size()); i++){
-		newVertices[i]->print();
-	}
-	printf("\n\nnew faces:\n");
-	for(int i=0; i<int(newFaces.size()); i++){
-		newFaces[i]->print();
-	}
-	printf("\n\nnew edges:\n");
-	for(int i=0; i<int(newEdges.size()); i++){
-		newEdges[i]->print();
-	}
-	**/
-
-	// add new elements to mesh
-	mVertices.insert(mVertices.end(), newVertices.begin(), newVertices.end());
-	mEdges.insert(mEdges.end(), newEdges.begin(), newEdges.end());
-	mFaces.insert(mFaces.end(), newFaces.begin(), newFaces.end());
-	mNbVertices += int(newVertices.size());
-	mNbEdges += int(newEdges.size());
-	mNbFaces += int(newFaces.size());
-}
-
-void mesh::Mesh::createQuads(mesh::Face* triangle, 
-	std::vector<mesh::Vertex*> &newVertices, 
-	std::vector<mesh::Edge*> &newEdges, 
-	std::vector<mesh::Face*> & newFaces){
-	
-	initQuads(triangle, newVertices, newEdges, newFaces);
-}
-
-void mesh::Mesh::initEdgesArroundTriFace(
-	std::vector<mesh::Vertex*> &newVertices, 
-	std::vector<mesh::Edge*> &newEdges, 
-	std::vector<mesh::Face*> & newFaces,
-	std::vector<mesh::Vertex*> & oldVertices,
-	std::vector<mesh::Edge*> & oldEdges){
-
-	for(int i=0; i<6; i+=2){
-		int half_i = i>>1;
-		// first half of the old edge
-		newEdges[i]->mVertexOrigin = oldVertices[half_i];
-		newEdges[i]->mVertexDestination = newVertices[half_i];
-		newEdges[i]->mFaceLeft = newFaces[half_i];
-		newEdges[i]->mFaceRight = oldEdges[half_i]->mFaceRight;
-		newEdges[i]->mEdgeRightCCW = oldEdges[half_i]->mEdgeRightCCW;
-		newEdges[i]->mEdgeRightCW = newEdges[i+1];
-		newEdges[i]->mEdgeLeftCCW = newEdges[12+i]; 
-		newEdges[i]->mEdgeLeftCW  = newEdges[(i-1+6)%6];
-		
-		// second half of the old edge
-		newEdges[i+1]->mVertexOrigin = newVertices[half_i];
-		newEdges[i+1]->mVertexDestination = oldVertices[(half_i+1) % 3];
-		newEdges[i+1]->mFaceLeft = newFaces[(half_i+1) % 3];
-		newEdges[i+1]->mFaceRight = oldEdges[half_i]->mFaceRight;
-		newEdges[i+1]->mEdgeRightCCW = newEdges[i];
-		newEdges[i+1]->mEdgeRightCW = oldEdges[half_i]->mEdgeRightCW;
-		newEdges[i+1]->mEdgeLeftCCW = newEdges[(i+2)%6]; 
-		newEdges[i+1]->mEdgeLeftCW  = newEdges[12+1+i];
-
-		// reversed edges
-		newEdges[i]->mReverseEdge = newEdges[i+6];
-		newEdges[i+6]->mReverseEdge = newEdges[i];
-		newEdges[i+1]->mReverseEdge = newEdges[i+1+6];
-		newEdges[i+1+6]->mReverseEdge = newEdges[i+1];
-
-		// update old edges
-		newEdges[i]->mEdgeRightCCW->mEdgeRightCW = newEdges[i];
-		newEdges[i+1]->mEdgeRightCW->mEdgeRightCCW = newEdges[i+1];
-		oldEdges[half_i]->mReverseEdge->mEdgeLeftCCW->mEdgeLeftCW = newEdges[i]->mReverseEdge;
-		oldEdges[half_i]->mReverseEdge->mEdgeLeftCW->mEdgeLeftCCW = newEdges[i+1]->mReverseEdge;
-
-		// update old vertices
-		oldVertices[half_i]->mEdge = newEdges[i];
-	}
-	
-}
-
-void mesh::Mesh::initEdgesInsideTriFace(
-	std::vector<mesh::Vertex*> &newVertices, 
-	std::vector<mesh::Edge*> &newEdges, 
-	std::vector<mesh::Face*> & newFaces){
-	for(int i=12; i<17; i+=2){
-		int tmpIndex = (i-12);
-		// vertex pointing to the middle
-		newEdges[i]->mVertexOrigin = newVertices[tmpIndex>>1];
-		newEdges[i]->mVertexDestination = newVertices[3];
-		newEdges[i]->mFaceLeft = newFaces[tmpIndex>>1];
-		newEdges[i]->mFaceRight = newFaces[((tmpIndex>>1)+1)%3];
-		newEdges[i]->mEdgeRightCCW = newEdges[tmpIndex+1+6];
-		if(i+3 <= 17)
-			newEdges[i]->mEdgeRightCW = newEdges[(i+3)];
-		else
-			newEdges[i]->mEdgeRightCW = newEdges[13];
-		if(i-1 >= 12)
-			newEdges[i]->mEdgeLeftCCW = newEdges[i-1];
-		else 
-			newEdges[i]->mEdgeLeftCCW = newEdges[17]; 
-
-		newEdges[i]->mEdgeLeftCW  = newEdges[tmpIndex];
-
-		// init new faces
-		newFaces[tmpIndex>>1]->mEdge = newEdges[i];
-
-		// create the reversed edges
-		newEdges[i]->mReverseEdge = newEdges[i+1];
-		newEdges[i+1]->mReverseEdge = newEdges[i];
-	}
-}
-
-void mesh::Mesh::initReversedEdgesTriFace(std::vector<mesh::Edge*> &newEdges){
-	// edges arround triangle
-	for(int i=0; i<6; i+=2){
-		newEdges[i]->createReversed(newEdges[i+6]);
-		newEdges[i+1]->createReversed(newEdges[i+1+6]);
-	}
-
-	// edges inside triangle
-	for(int i=12; i<17; i+=2){
-		newEdges[i]->createReversed(newEdges[i+1]);
-	}
-
-}
-
-void mesh::Mesh::initQuads(mesh::Face* triangle,
-	std::vector<mesh::Vertex*> &newVertices, 
-	std::vector<mesh::Edge*> &newEdges, 
-	std::vector<mesh::Face*> & newFaces){
-	// initialize the new elements
-	for(int i=0; i<4; i++){
-		newVertices.push_back(new mesh::Vertex());
-	}
-	assert(newVertices.size() == 4);
-
-	for(int i=0; i<(9<<1); i++){
-		newEdges.push_back(new mesh::Edge());
-	}
-	assert(newEdges.size() == 18);
-
-	for(int i=0; i<3; i++){
-		newFaces.push_back(new mesh::Face());
-	}
-	assert(newFaces.size() == 3);
-
-	// get the new vertices coordinates
-	std::vector<mesh::Vertex*> oldVertices = triangle->getSurroundingVertices();
-	assert(oldVertices.size() == 3);
-	for(int i=0; i<3; i++){
-		maths::Vector3 coord1 = *(oldVertices[i]->mCoords);
-		maths::Vector3 coord2 = *(oldVertices[(i+1)%3]->mCoords);
-		newVertices[i]->mCoords = new maths::Vector3((coord2+coord1)/2.0f);
-		newVertices[i]->mEdge = newEdges[2*i + 1];
-	}
-	// middle vertex
-	newVertices[3]->mCoords = new maths::Vector3(
-									(*(oldVertices[0]->mCoords)
-									+*(oldVertices[1]->mCoords)
-									+*(oldVertices[2]->mCoords)
-									) / 3.0f);
-	newVertices[3]->mEdge = newEdges[17];
-
-	// init the new edges' around the face
-	std::vector<mesh::Edge*> oldEdges = triangle->getSurroundingEdges();
-	initEdgesArroundTriFace(newVertices, newEdges, newFaces, oldVertices, oldEdges);
-
-	// init the vertices in the middle
-	initEdgesInsideTriFace(newVertices, newEdges, newFaces);
-
-	// create the reversed edges
-	initReversedEdgesTriFace(newEdges);
-
-	// update old faces
-	for(int i=0; i<int(oldEdges.size())>>1; i++){
-		if (oldEdges[i]->mFaceRight->mEdge == oldEdges[i]->mReverseEdge){
-			oldEdges[i]->mFaceRight->mEdge = newEdges[2*i + 6];
-		}
-	}
-
-	// remove old triangle
-	removeFaceFromList(triangle);
-
-	// remove old edges
-	for(int i = 0; i<int(oldEdges.size()); i++){
-		removeEdgeFromList(oldEdges[i]);
-	}
-
-}
-
-
-int mesh::Mesh::howManyTriangles(){
-	int res = 0;
+int mesh::Mesh::howManyTriangles() const {
+	int sum = 0;
 	for(int i=0; i<mNbFaces; i++){
-		if(mFaces[i]->isTriangle()) res++;
+		if(mFaces[i]->isTriangle()) sum++;
 	}
-	return res;
+	return sum;
 }
+
+void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2){
+	std::vector<mesh::Edge*> surEdges = face->getSurroundingEdges();
+	int nbSurEdges = surEdges.size()>>1;
+
+	// initiate the new edges
+	mesh::Edge* edge = new mesh::Edge();
+	mesh::Edge* edgeRev = new mesh::Edge();
+
+	// initiate the new faces
+	mesh::Face* halfFace1 = new mesh::Face();
+	mesh::Face* halfFace2 = new mesh::Face();
+
+	// update new faces
+	halfFace1->mEdge = edgeRev;
+	halfFace2->mEdge = edge;
+
+	// update first edge
+	edge->mVertexOrigin = v1;
+	edge->mVertexDestination = v2;
+	edge->mFaceLeft = halfFace2;
+	edge->mFaceRight = halfFace1;
+	edge->mReverseEdge = edgeRev;
+
+	// update first edge neighbours
+	// get the edge that goes into v1
+	int startIdx = 0;
+	while(mEdges[startIdx]->mVertexDestination->mId != v1->mId) startIdx++;
+
+	// the current face we're surrounding
+	int curFace = 2;
+	for(int i=startIdx; i<nbSurEdges+startIdx; i++){
+		int idx = i%nbSurEdges;
+		
+		// update new edge
+		if(surEdges[idx]->mVertexDestination->mId == v1->mId) {
+			edge->mEdgeLeftCW = surEdges[idx];
+			curFace = 2;
+		}
+		if(surEdges[idx]->mVertexOrigin->mId == v2->mId) {
+			edge->mEdgeLeftCCW = surEdges[idx];
+			curFace = 2;
+		}
+		if(surEdges[idx]->mVertexDestination->mId == v2->mId) {
+			edge->mEdgeRightCW = surEdges[idx]->mReverseEdge;
+			curFace = 1;
+		}
+		if(surEdges[idx]->mVertexOrigin->mId == v1->mId) {
+			curFace = 1;
+		}
+
+		// update old edge
+		switch(curFace){
+			case 2:
+				surEdges[idx]->mFaceLeft = halfFace2;
+				surEdges[idx]->mReverseEdge->mFaceRight = halfFace2;
+				break;
+			case 1:
+				// update old edge
+				surEdges[idx]->mFaceLeft = halfFace2;
+				surEdges[idx]->mReverseEdge->mFaceRight = halfFace2;
+				break;
+			default:
+				assert(false);
+		}
+
+	}
+	assert(edge->mEdgeRightCCW);
+	assert(edge->mEdgeRightCW);
+	assert(edge->mEdgeLeftCCW);
+	assert(edge->mEdgeLeftCW);
+	// update reversed edge
+	edge->createReversed(edgeRev);
+	assert(edgeRev->mEdgeRightCCW);
+	assert(edgeRev->mEdgeRightCW);
+	assert(edgeRev->mEdgeLeftCCW);
+	assert(edgeRev->mEdgeLeftCW);
+
+	// remove old face from list
+	removeFaceFromList(face);
+
+	// add new elements to list
+	mFaces.push_back(halfFace1);
+	mFaces.push_back(halfFace2);
+	mNbFaces += 2;
+
+	mEdges.push_back(edge);
+	mEdges.push_back(edgeRev);
+	mNbEdges += 2;
+
+	// check if new faces are triangles
+	surEdges = halfFace1->getSurroundingEdges();
+	if(surEdges.size() != 6) halfFace1->mIsTriangle = false;
+	surEdges = halfFace2->getSurroundingEdges();
+	if(surEdges.size() != 6) halfFace2->mIsTriangle = false;
+
+}
+
+std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle) const {
+	const int VISITED = 2;
+	const int ONGOING = 1;
+	const int UNVISITED = 0;
+
+	// the path between the two triangles
+	std::vector<mesh::Face*> path;
+
+	// initiate a dictionary containing the face's id as keys and the state of each faces (unvisited, ongoing or visited) as values
+	std::map<int, int> status;
+	// initiate a dictionary containing the face's id as keys and the parent in the search as value
+	std::map<int, mesh::Face*> parents;
+	for(int i=0; i<mNbFaces; i++){
+		status[mFaces[i]->mId] = UNVISITED;
+		parents[mFaces[i]->mId] = nullptr;
+	}
+	parents[triangle->mId] = nullptr;
+
+	// initiate the queue for the BFS search
+	std::queue<mesh::Face*> queue;
+	queue.push(triangle);
+
+	// to leave the while loop
+	bool quit = false;
+	int closestTriangleId = -1;
+	mesh::Face* pathFace = nullptr;
+	// print();
+
+	while(!queue.empty()){
+		// remove current face from queue
+		mesh::Face* curFace = queue.front();
+		queue.pop();
+		// printf("\n\nCur face:\n");
+		// curFace->print();
+
+		// for each neighbours
+		std::vector<mesh::Face*> neighbours = triangle->getSurroundingFaces();
+		for(int i=0; i<int(neighbours.size()); i++){
+			int curNeighbourFaceId = neighbours[i]->mId;
+			// printf("\nCur Neighbour:\n");
+			// neighbours[i]->print();
+
+			// check if we've found a triangle
+			if(neighbours[i]->isTriangle()){
+				quit = true;
+				// save the face and update it's parent
+				closestTriangleId = curNeighbourFaceId;
+				pathFace = neighbours[i];
+				parents[curNeighbourFaceId] = curFace;
+				break;
+			}
+
+			// if current face not visited yet update its status and add it to the queue
+			if(status[curNeighbourFaceId] == UNVISITED){
+				status[curNeighbourFaceId] = ONGOING;
+				// update parent
+				parents[curNeighbourFaceId] = curFace;
+				queue.push(neighbours[i]);
+			}
+		}
+
+		if(quit) break;
+
+		// done visiting the current face
+		status[curFace->mId] = VISITED;
+	}
+
+	// test if we've found a triangle
+	assert(closestTriangleId != -1);
+
+	// get the path from the target triangle to the current one
+	while(pathFace != nullptr){
+		// printf("\nPathFace:\n");
+		// pathFace->print();
+		path.push_back(pathFace);
+		pathFace = parents[pathFace->mId];
+	}
+
+	return path;
+}
+
+
+void mesh::Mesh::triToPureQuad(){
+	/* 
+	for each triangle
+		get a list of faces between it and another triangle using BFS
+		for each of the quads in the list
+			find the edge to remove
+			remove the edge
+			find the vertices between which you'll rebuild a new edge
+			build a new edge
+		remove the edge between the two triangles
+	*/
+	mesh::Face* curTriangle = getTriangle();
+	while(curTriangle != nullptr){
+		// get a list of faces between it and another triangle using BFS
+		std::vector<mesh::Face*> path = pathToClosestTriangle(curTriangle);
+
+		mesh::Face* curTri = nullptr;
+		mesh::Face* curQuad = nullptr;
+		mesh::Edge* edgeToRemove = nullptr;
+		mesh::Edge* revEdgeToRemove = nullptr;
+		// print();
+		while(path.size() != 0){
+			// get current triangle and current quad neighbour
+			curTri = path.back();
+			assert(curTri != nullptr);
+			path.pop_back();
+			// printf("\nCurTri:\n");
+			// curTri->print();
+
+			curQuad = path.back();
+			assert(curQuad != nullptr);
+			path.pop_back();
+			// printf("\nCurQuad:\n");
+			// curQuad->print();
+
+			// find the edges to remove
+			edgeToRemove = curTri->getEdgeBetween(curQuad);
+			assert(edgeToRemove != nullptr);
+			revEdgeToRemove = edgeToRemove->mReverseEdge;
+			assert(revEdgeToRemove != nullptr);
+
+			// test if found triangle
+			if(curQuad->isTriangle()) break;
+
+			mesh::Face* nextQuad = path.back();
+			assert(nextQuad != nullptr);
+
+			// find the future vertices from which we'll add new edges
+			mesh::Vertex* v1 = mesh::Vertex::getCommonVertex(curTri, curQuad, nextQuad);
+			mesh::Vertex* v2 = mesh::Vertex::getIsolatedVertex(curQuad, curTri, nextQuad);
+			// test if the two chosen vertices are correct 
+			assert(v1 != nullptr);
+			assert(v2 != nullptr);
+			std::vector<mesh::Vertex*> surTmp = curQuad->getSurroundingVertices();
+			assert(v1->isInList(surTmp) && v2->isInList(surTmp));
+
+			// remove the edges
+			removeEdge(edgeToRemove);
+			removeEdge(revEdgeToRemove);
+
+			// get the newly created face
+			mesh::Face* newPoly = mFaces.back(); // the last added 
+			createEdge(newPoly, v1, v2);
+
+			mesh::Face* newTriangle = mFaces.back(); // the last added
+			if(newTriangle->isQuad()) newTriangle = mFaces[mNbFaces-2];
+			assert(newTriangle->isTriangle());
+
+			// putting the new triangle at the end of the path
+			path.push_back(newTriangle);
+
+		}
+
+		// remove the edges
+		assert(edgeToRemove != nullptr);
+		assert(revEdgeToRemove != nullptr);
+		removeEdge(edgeToRemove);
+		removeEdge(revEdgeToRemove);
+
+		// get a new triangle
+		curTriangle = getTriangle();
+	}
+}
+
+
+
+
+// void mesh::Mesh::triToPureQuadMarkingPhase(){
+// 	/**
+// 	for all triangles
+// 		create new vertex at center
+// 		create 3 new faces arround that barycenter
+// 		remove old triangular face
+
+// 		mark the old triangular edges as "toDelete"
+// 	remove these edges
+// 	*/
+
+// 	// get the remaining triangles
+// 	std::vector<mesh::Face*> triangles = getTriangles();
+// 	for(int i=0; i<int(triangles.size()); i++){ // change access order to avoid emptying the array
+// 		mesh::Face* curTriangle = triangles[i];
+// 		// create new vertex
+// 		mesh::Vertex* midVertex = triToQuadNewMiddleVertex(curTriangle);
+// 		// create new faces
+// 		std::vector<mesh::Face*> newFaces = triToQuadNewFaces(curTriangle);
+// 		// create new edges
+// 		std::vector<mesh::Edge*> newEdges = triToQuadNewEdges(curTriangle, midVertex);
+
+// 		// remove old triangle face
+// 		triToQuadRemoveOldTriangle(curTriangle);
+// 	}
+// }
+
+// mesh::Vertex* mesh::Mesh::triToQuadNewMiddleVertex(mesh::Face* triangle){
+// 	std::vector<mesh::Vertex*> oldVertices = triangle->getSurroundingVertices();
+// 	assert(oldVertices.size() == 3);
+// 	// middle vertex
+// 	mesh::Vertex* midVertex = new mesh::Vertex();
+// 	midVertex->mCoords = new maths::Vector3( (*(oldVertices[0]->mCoords)+*(oldVertices[1]->mCoords)+*(oldVertices[2]->mCoords)) / 3.0f);
+// 	return midVertex;
+// }
+
+// std::vector<mesh::Face*> mesh::Mesh::triToQuadNewFaces(mesh::Face* triangle){
+// 	std::vector<mesh::Edge*> surEdges = triangle->getSurroundingEdges();
+// 	std::vector<mesh::Face*> newFaces;
+// 	int nbNewFaces = 3;
+// 	for(int i=0; i<nbNewFaces; i++){
+// 		newFaces.push_back(new mesh::Face());
+// 	}
+
+// 	return newFaces;
+// }
+
+
+
+// std::vector<mesh::Face*> mesh::Mesh::getTriangles(){
+// 	// check for all the mesh's faces if it is a triangle
+// 	std::vector<mesh::Face*> triangles;
+// 	for(int i=0; i<mNbFaces; i++){
+// 		// printf("i: %d\n", i);
+// 		// mFaces[i]->print();
+// 		// mFaces[i]->mEdge->print();
+// 		// print();
+// 		if(mFaces[i]->isTriangle())
+// 			triangles.push_back(mFaces[i]);
+// 	}
+// 	return triangles;
+// }
+
+// int mesh::Mesh::howManyTriangles(){
+// 	return getTriangles().size();
+// }
+
+
+
+// void mesh::Mesh::subdivideTriangle(mesh::Face* triangle){
+// 	// create the 4 new vertices
+// 	std::vector<mesh::Vertex*> newVertices;
+// 	// create the 18 new edges
+// 	std::vector<mesh::Edge*> newEdges;
+// 	// create the 3 new faces
+// 	std::vector<mesh::Face*> newFaces;
+
+// 	createQuads(triangle, newVertices, newEdges, newFaces);
+
+// 	// print newly created elements
+// 	/**
+// 	printf("\n\nnew vertices:\n");
+// 	for(int i=0; i<int(newVertices.size()); i++){
+// 		newVertices[i]->print();
+// 	}
+// 	printf("\n\nnew faces:\n");
+// 	for(int i=0; i<int(newFaces.size()); i++){
+// 		newFaces[i]->print();
+// 	}
+// 	printf("\n\nnew edges:\n");
+// 	for(int i=0; i<int(newEdges.size()); i++){
+// 		newEdges[i]->print();
+// 	}
+// 	**/
+
+// 	// add new elements to mesh
+// 	mVertices.insert(mVertices.end(), newVertices.begin(), newVertices.end());
+// 	mEdges.insert(mEdges.end(), newEdges.begin(), newEdges.end());
+// 	mFaces.insert(mFaces.end(), newFaces.begin(), newFaces.end());
+// 	mNbVertices += int(newVertices.size());
+// 	mNbEdges += int(newEdges.size());
+// 	mNbFaces += int(newFaces.size());
+// }
+
+// void mesh::Mesh::createQuads(mesh::Face* triangle, 
+// 	std::vector<mesh::Vertex*> &newVertices, 
+// 	std::vector<mesh::Edge*> &newEdges, 
+// 	std::vector<mesh::Face*> & newFaces){
+	
+// 	initQuads(triangle, newVertices, newEdges, newFaces);
+// }
+
+// void mesh::Mesh::initEdgesArroundTriFace(
+// 	std::vector<mesh::Vertex*> &newVertices, 
+// 	std::vector<mesh::Edge*> &newEdges, 
+// 	std::vector<mesh::Face*> & newFaces,
+// 	std::vector<mesh::Vertex*> & oldVertices,
+// 	std::vector<mesh::Edge*> & oldEdges){
+
+// 	for(int i=0; i<6; i+=2){
+// 		int half_i = i>>1;
+// 		// first half of the old edge
+// 		newEdges[i]->mVertexOrigin = oldVertices[half_i];
+// 		newEdges[i]->mVertexDestination = newVertices[half_i];
+// 		newEdges[i]->mFaceLeft = newFaces[half_i];
+// 		newEdges[i]->mFaceRight = oldEdges[half_i]->mFaceRight;
+// 		newEdges[i]->mEdgeRightCCW = oldEdges[half_i]->mEdgeRightCCW;
+// 		newEdges[i]->mEdgeRightCW = newEdges[i+1];
+// 		newEdges[i]->mEdgeLeftCCW = newEdges[12+i]; 
+// 		newEdges[i]->mEdgeLeftCW  = newEdges[(i-1+6)%6];
+		
+// 		// second half of the old edge
+// 		newEdges[i+1]->mVertexOrigin = newVertices[half_i];
+// 		newEdges[i+1]->mVertexDestination = oldVertices[(half_i+1) % 3];
+// 		newEdges[i+1]->mFaceLeft = newFaces[(half_i+1) % 3];
+// 		newEdges[i+1]->mFaceRight = oldEdges[half_i]->mFaceRight;
+// 		newEdges[i+1]->mEdgeRightCCW = newEdges[i];
+// 		newEdges[i+1]->mEdgeRightCW = oldEdges[half_i]->mEdgeRightCW;
+// 		newEdges[i+1]->mEdgeLeftCCW = newEdges[(i+2)%6]; 
+// 		newEdges[i+1]->mEdgeLeftCW  = newEdges[12+1+i];
+
+// 		// reversed edges
+// 		newEdges[i]->mReverseEdge = newEdges[i+6];
+// 		newEdges[i+6]->mReverseEdge = newEdges[i];
+// 		newEdges[i+1]->mReverseEdge = newEdges[i+1+6];
+// 		newEdges[i+1+6]->mReverseEdge = newEdges[i+1];
+
+// 		// update old edges
+// 		newEdges[i]->mEdgeRightCCW->mEdgeRightCW = newEdges[i];
+// 		newEdges[i+1]->mEdgeRightCW->mEdgeRightCCW = newEdges[i+1];
+// 		oldEdges[half_i]->mReverseEdge->mEdgeLeftCCW->mEdgeLeftCW = newEdges[i]->mReverseEdge;
+// 		oldEdges[half_i]->mReverseEdge->mEdgeLeftCW->mEdgeLeftCCW = newEdges[i+1]->mReverseEdge;
+
+// 		// update old vertices
+// 		oldVertices[half_i]->mEdge = newEdges[i];
+// 	}
+	
+// }
+
+// void mesh::Mesh::initEdgesInsideTriFace(
+// 	std::vector<mesh::Vertex*> &newVertices, 
+// 	std::vector<mesh::Edge*> &newEdges, 
+// 	std::vector<mesh::Face*> & newFaces){
+// 	for(int i=12; i<17; i+=2){
+// 		int tmpIndex = (i-12);
+// 		// vertex pointing to the middle
+// 		newEdges[i]->mVertexOrigin = newVertices[tmpIndex>>1];
+// 		newEdges[i]->mVertexDestination = newVertices[3];
+// 		newEdges[i]->mFaceLeft = newFaces[tmpIndex>>1];
+// 		newEdges[i]->mFaceRight = newFaces[((tmpIndex>>1)+1)%3];
+// 		newEdges[i]->mEdgeRightCCW = newEdges[tmpIndex+1+6];
+// 		if(i+3 <= 17)
+// 			newEdges[i]->mEdgeRightCW = newEdges[(i+3)];
+// 		else
+// 			newEdges[i]->mEdgeRightCW = newEdges[13];
+// 		if(i-1 >= 12)
+// 			newEdges[i]->mEdgeLeftCCW = newEdges[i-1];
+// 		else 
+// 			newEdges[i]->mEdgeLeftCCW = newEdges[17]; 
+
+// 		newEdges[i]->mEdgeLeftCW  = newEdges[tmpIndex];
+
+// 		// init new faces
+// 		newFaces[tmpIndex>>1]->mEdge = newEdges[i];
+
+// 		// create the reversed edges
+// 		newEdges[i]->mReverseEdge = newEdges[i+1];
+// 		newEdges[i+1]->mReverseEdge = newEdges[i];
+// 	}
+// }
+
+// void mesh::Mesh::initReversedEdgesTriFace(std::vector<mesh::Edge*> &newEdges){
+// 	// edges arround triangle
+// 	for(int i=0; i<6; i+=2){
+// 		newEdges[i]->createReversed(newEdges[i+6]);
+// 		newEdges[i+1]->createReversed(newEdges[i+1+6]);
+// 	}
+
+// 	// edges inside triangle
+// 	for(int i=12; i<17; i+=2){
+// 		newEdges[i]->createReversed(newEdges[i+1]);
+// 	}
+
+// }
+
+// void mesh::Mesh::initQuads(mesh::Face* triangle,
+// 	std::vector<mesh::Vertex*> &newVertices, 
+// 	std::vector<mesh::Edge*> &newEdges, 
+// 	std::vector<mesh::Face*> & newFaces){
+// 	// initialize the new elements
+// 	for(int i=0; i<4; i++){
+// 		newVertices.push_back(new mesh::Vertex());
+// 	}
+// 	assert(newVertices.size() == 4);
+
+// 	for(int i=0; i<(9<<1); i++){
+// 		newEdges.push_back(new mesh::Edge());
+// 	}
+// 	assert(newEdges.size() == 18);
+
+// 	for(int i=0; i<3; i++){
+// 		newFaces.push_back(new mesh::Face());
+// 	}
+// 	assert(newFaces.size() == 3);
+
+// 	// get the new vertices coordinates
+// 	std::vector<mesh::Vertex*> oldVertices = triangle->getSurroundingVertices();
+// 	assert(oldVertices.size() == 3);
+// 	for(int i=0; i<3; i++){
+// 		maths::Vector3 coord1 = *(oldVertices[i]->mCoords);
+// 		maths::Vector3 coord2 = *(oldVertices[(i+1)%3]->mCoords);
+// 		newVertices[i]->mCoords = new maths::Vector3((coord2+coord1)/2.0f);
+// 		newVertices[i]->mEdge = newEdges[2*i + 1];
+// 	}
+// 	// middle vertex
+// 	newVertices[3]->mCoords = new maths::Vector3(
+// 									(*(oldVertices[0]->mCoords)
+// 									+*(oldVertices[1]->mCoords)
+// 									+*(oldVertices[2]->mCoords)
+// 									) / 3.0f);
+// 	newVertices[3]->mEdge = newEdges[17];
+
+// 	// init the new edges' around the face
+// 	std::vector<mesh::Edge*> oldEdges = triangle->getSurroundingEdges();
+// 	initEdgesArroundTriFace(newVertices, newEdges, newFaces, oldVertices, oldEdges);
+
+// 	// init the vertices in the middle
+// 	initEdgesInsideTriFace(newVertices, newEdges, newFaces);
+
+// 	// create the reversed edges
+// 	initReversedEdgesTriFace(newEdges);
+
+// 	// update old faces
+// 	for(int i=0; i<int(oldEdges.size())>>1; i++){
+// 		if (oldEdges[i]->mFaceRight->mEdge == oldEdges[i]->mReverseEdge){
+// 			oldEdges[i]->mFaceRight->mEdge = newEdges[2*i + 6];
+// 		}
+// 	}
+
+// 	// remove old triangle
+// 	removeFaceFromList(triangle);
+
+// 	// remove old edges
+// 	for(int i = 0; i<int(oldEdges.size()); i++){
+// 		removeEdgeFromList(oldEdges[i]);
+// 	}
+
+// }
+
