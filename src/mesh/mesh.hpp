@@ -94,6 +94,11 @@ class Mesh{
         void toObj(std::string file);
 
         /**
+         * Check mesh correctness
+        */
+        void checkCorrectness() const;
+
+        /**
          * Transform a triangular mesh into a quad one
         */
         void triToQuad();
@@ -126,6 +131,11 @@ class Mesh{
          * Print the mesh in the standard output
         */
         void print() const;
+
+        /**
+         * Print the mesh's stats in the standard output
+        */
+        void printStats() const;
 
 
     private:
@@ -286,14 +296,15 @@ class Mesh{
         */
         std::vector<mesh::Edge*> getAllEdgesToDelete();
 
-        /**
-         * Test if the possible edges have already been visited
-         * @param face The face as a list of integers (willl be modified)
-         * @param edgeTable The list of already visited edges
-         * @param position The index of the currently tried position
-         * @return True if at least one of the edges has already been visited
-        */
-        static bool edgesAlreadyVisited(std::vector<int> & face, const std::vector<std::vector<int>> & edgeTable, int position);
+        // /**
+        //  * Test if the possible edges have already been visited
+        //  * @param face The face as a list of integers (willl be modified)
+        //  * @param reversed Tells if the rotation directioin have been reversed
+        //  * @param edgeTable The list of already visited edges
+        //  * @param position The index of the currently tried position
+        //  * @return True if at least one of the edges has already been visited
+        // */
+        // static bool edgesAlreadyVisited(std::vector<int> & face, bool & reversed, const std::vector<std::vector<int>> & edgeTable, int position);
 
         // /**
         //  * Create the middle vertex for the Catmull-Clark subdivision of remaining triangles

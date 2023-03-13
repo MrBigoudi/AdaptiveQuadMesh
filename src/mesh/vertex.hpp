@@ -59,6 +59,12 @@ class Vertex{
         std::string toString();
 
         /**
+         * Cast a list of vertices into a printable string
+         * @return The vertices as a string
+        */
+        static std::string listToString(std::vector<mesh::Vertex*> list);
+
+        /**
          * Print a vertex
         */
         void print();
@@ -91,11 +97,28 @@ class Vertex{
         static mesh::Vertex* getIsolatedVertex(mesh::Face* faceToIsolate, mesh::Face* f2, mesh::Face* f3);
 
         /**
+         * Get the opposite vertex of a given one inside a given quad
+         * @param quad The quad arround which is the vertex
+         * @param v The vertex which is opposite to the one we're looking for
+         * @return The opposite vertex (or nullptr if the given face is a triangle)
+        */
+		static mesh::Vertex* getOppositeVertex(mesh::Face* quad, mesh::Vertex* v);
+
+
+        /**
          * Test if the vertex is present in a given list of vertices
          * @param list The list of vertices
          * @return True if it is, false if it is not
         */
         bool isInList(std::vector<mesh::Vertex*> list) const;
+
+        /**
+         * Check if there exists two edges with the same origin and destination
+         * @param edges The list to check
+         * @param nbVertices The total number of possible vertices
+         * @return True if there exists such edges
+        */
+        static bool twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices);
 };
 
 }

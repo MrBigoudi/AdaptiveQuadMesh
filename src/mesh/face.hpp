@@ -124,6 +124,20 @@ class Face{
         */
         mesh::Edge* getEdgeBetween(mesh::Face* face) const;
 
+        /**
+         * Give the number of common edges between two faces
+         * @param f2 The second face
+         * @return The number of shared edges between the current face and the given one
+        */
+        int getNumberOfSharedEdges(mesh::Face* f2) const;
+
+        /**
+         * Get the list of unconnected vertices between two faces
+         * @param f2 The second face
+         * @return The list of vertices
+        */
+        std::vector<mesh::Vertex*> getUnconnectedVertices(mesh::Face* f2) const;
+
 };
 
 }

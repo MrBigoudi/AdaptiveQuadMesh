@@ -128,8 +128,15 @@ class Edge{
         bool isRemovable();
 
         /**
+         * Check if a list of edges has doubles
+         * @param edges The list of edges to check
+         * @return True if it has doubles
+        */
+        static bool hasDoubles(std::vector<mesh::Edge*> edges);
+
+        /**
          * Get the sum of pairwise dot products of edges surrounding a face
-         * @param edgeList A list of chained edges surrounding a face 
+         * @param face A list of chained edges surrounding a face 
          * @return The sum of the dot products
         */
         static float getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);

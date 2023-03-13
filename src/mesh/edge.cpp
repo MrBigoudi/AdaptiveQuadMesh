@@ -110,3 +110,14 @@ void mesh::Edge::createReversed(mesh::Edge* edge){
 bool mesh::Edge::cmp(const mesh::Edge &e1, const mesh::Edge &e2){
     return e1.mSumDotProd < e2.mSumDotProd;
 }
+
+bool mesh::Edge::hasDoubles(std::vector<mesh::Edge*> edges){
+    int nbEdges = int(edges.size());
+    for(int i=0; i<nbEdges; i++){
+        int id1 = edges[i]->mId;
+        for(int j=i+1; j<nbEdges; j++){
+            if(edges[j]->mId == id1) return true;
+        }
+    }
+    return false;
+}

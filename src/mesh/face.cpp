@@ -9,18 +9,21 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdg
     std::vector<mesh::Edge*> surEdges;
 
     mesh::Edge* e0 = startingEdge;
+
+    if (e0->mFaceLeft->mId == mId) {
+        e0 = e0->mReverseEdge;
+        assert(false);
+    }
+
     mesh::Edge* curEdge = e0;
 
     // printf("\n\nBeg Do While:\ne0: %d\n", e0->mId);
     do{
         // curEdge->print();
         surEdges.push_back(curEdge);
-        // printf("curEdge: %d, e0: %d\n", curEdge->mId, e0->mId);
-        if (curEdge->mFaceLeft->mId == mId){
-        	curEdge = curEdge->mEdgeLeftCW;
-        }else if (curEdge->mFaceRight->mId == mId){
-            curEdge = curEdge->mEdgeRightCW;
-        }else{
+        if (curEdge->mFaceRight->mId == mId){
+        	curEdge = curEdge->mEdgeRightCW;
+        }else {
             assert(false);
         }
     }while(curEdge->mId != e0->mId);
@@ -56,8 +59,17 @@ std::vector<mesh::Face*> mesh::Face::getSurroundingFaces() const{
     std::vector<mesh::Edge*>surEdges = getSurroundingEdges(mEdge);
     // print();
     for(int i=0; i<int(surEdges.size()); i++){
-        if(surEdges[i]->mFaceRight->mId != mId)
-            surFaces.push_back(surEdges[i]->mFaceRight);
+        if(surEdges[i]->mFaceLeft->mId != mId){
+            bool alreadyAdded = false;
+            for(int j=0; j<int(surFaces.size()); j++){
+                if(surFaces[j]->mId == surEdges[i]->mFaceLeft->mId){
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if(!alreadyAdded)
+                surFaces.push_back(surEdges[i]->mFaceLeft);
+        }
     }
     return surFaces;
 }
@@ -96,8 +108,8 @@ mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
 }
 
 std::string mesh::Face::toString() const{
-    char buffer[50];
-    sprintf(buffer, "f%d -> e%d, toDel = %d, toMerge = %d, isTriangle: %d", mId, mEdge->mId, mToDelete, mToMerge, mIsTriangle);
+    char buffer[128];
+    sprintf(buffer, "f%d -> e%d, v: %s, toDel = %d, toMerge = %d, isTriangle: %d", mId, mEdge->mId, mesh::Vertex::listToString(getSurroundingVertices()).c_str(), mToDelete, mToMerge, mIsTriangle);
     return buffer;
 }
 
@@ -142,4 +154,80 @@ mesh::Edge* mesh::Face::getEdgeBetween(mesh::Face* face) const{
     }
 
     return nullptr;
+}
+
+int mesh::Face::getNumberOfSharedEdges(mesh::Face* f2) const {
+    std::vector<mesh::Edge*> sur1 = getSurroundingEdges();
+    std::vector<mesh::Edge*> sur2 = f2->getSurroundingEdges();
+
+    int sum = 0;
+
+    for(int i=0; i<int(sur1.size()); i++){
+        for(int j=0; j<int(sur2.size()); j++){
+            if(sur1[i]->mId == sur2[j]->mId) sum++;
+        }
+    }
+
+    return sum;
+}
+
+std::vector<mesh::Vertex*> mesh::Face::getUnconnectedVertices(mesh::Face* f2) const{
+    std::vector<mesh::Edge*> sur1 = getSurroundingEdges();
+    std::vector<mesh::Edge*> sur2 = f2->getSurroundingEdges();
+
+    std::vector<mesh::Vertex*> unconnected;
+    bool exists = false;
+    mesh::Vertex* curVertex;
+    mesh::Vertex* nextVertex;
+
+    if(sur1.size() >= sur2.size()){
+        for(int i=0; i<int(sur1.size()); i++){
+            curVertex = sur1[i]->mVertexOrigin;
+            exists = false;
+            for(int j=0; j<int(sur2.size()); j++){
+                if(sur2[j]->mVertexOrigin->mId == curVertex->mId){
+                    exists = true;
+                    break;
+                }
+            }
+            if(!exists) {
+                unconnected.push_back(curVertex);
+                break;
+            }
+        }
+        for(int i=0; i<int(sur1.size()); i++){
+            if(curVertex->mId != sur1[i]->mVertexOrigin->mId){
+                nextVertex = sur1[i]->mVertexDestination;
+                unconnected.push_back(nextVertex);
+                break;
+            }
+        }
+    } else {
+        for(int i=0; i<int(sur2.size()); i++){
+            curVertex = sur2[i]->mVertexOrigin;
+            exists = false;
+            for(int j=0; j<int(sur1.size()); j++){
+                if(sur1[j]->mVertexOrigin->mId == curVertex->mId){
+                    exists = true;
+                    break;
+                }
+            }
+            if(!exists) {
+                unconnected.push_back(curVertex);
+                break;
+            }
+        }
+        for(int i=0; i<int(sur2.size()); i++){
+            if(curVertex->mId == sur2[i]->mVertexOrigin->mId){
+                // sur2[i]->print();
+                // sur2[i]->mEdgeRightCW->print();
+                // sur2[i]->mEdgeRightCCW->print();
+                nextVertex = sur2[i]->mEdgeRightCW->mVertexDestination;
+                unconnected.push_back(nextVertex);
+                break;
+            }
+        }
+    }
+
+    return unconnected; 
 }

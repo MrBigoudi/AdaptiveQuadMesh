@@ -1,5 +1,8 @@
 #include "vertex.hpp"
 
+#include <sstream>
+#include <iterator>
+
 int mesh::Vertex::ID_CPT = 0;
 
 std::string mesh::Vertex::toString(){
@@ -19,18 +22,19 @@ std::vector<mesh::Vertex*> mesh::Vertex::getCommonVertices(mesh::Face* f1, mesh:
 
     std::vector<mesh::Vertex*> common;
 
+    std::vector<mesh::Vertex*> tmp = surV1;
+    if(int(surV1.size()) < int((surV2.size()))){
+        surV1 = surV2;
+        surV2 = tmp;
+    }
+
     for(int i=0; i<int(surV1.size()); i++){
         int v1Id = surV1[i]->mId;
         for(int j=0; j<int(surV2.size()); j++){
             int v2Id = surV2[j]->mId;
 
             if(v1Id == v2Id){
-                if(common.size() == 0) common.push_back(surV1[i]);
-                else if (common[0]->mId == v1Id) continue;
-                else {
-                    common.push_back(surV1[i]);
-                    return common; 
-                }
+                common.push_back(surV1[i]);
             }
         }
     }
@@ -76,5 +80,42 @@ mesh::Vertex* mesh::Vertex::getIsolatedVertex(mesh::Face* faceToIsolate, mesh::F
     }
 
     return nullptr;
+}
 
+
+mesh::Vertex* mesh::Vertex::getOppositeVertex(mesh::Face* quad, mesh::Vertex* v){
+    if(quad->isTriangle()) return nullptr;
+    mesh::Edge* edge = quad->mEdge;
+    while(edge->mVertexOrigin->mId != v->mId) edge = edge->mEdgeRightCW;
+    return edge->mEdgeRightCW->mVertexDestination;
+}
+
+
+
+
+std::string mesh::Vertex::listToString(std::vector<mesh::Vertex*> list){
+    std::vector<std::string> strings;
+    for(int i=0; i<int(list.size()); i++){
+        char buffer[50];
+        sprintf(buffer, "v%d", list[i]->mId);
+        strings.push_back(buffer);
+    }
+
+    const char* const delim = ", ";
+
+    std::ostringstream imploded;
+    std::copy(strings.begin(), strings.end(),
+            std::ostream_iterator<std::string>(imploded, delim));
+    return imploded.str();
+}
+
+bool mesh::Vertex::twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices){
+	std::vector<std::vector<int>> table(nbVertices, std::vector<int>(nbVertices, -1));
+    for(int i=0; i<int(edges.size()); i++){
+        int v0 = edges[i]->mVertexOrigin->mId;
+        int v1 = edges[i]->mVertexDestination->mId;
+        if(table[v0][v1] != -1) return true;
+        table[v0][v1] = edges[i]->mId;
+    }
+    return false;
 }

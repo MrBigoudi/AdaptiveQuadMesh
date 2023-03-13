@@ -13,6 +13,70 @@
 #include "mesh.hpp"
 #include "vector3.hpp"
 
+void mesh::Mesh::checkCorrectness() const {
+	// printf("\nBeg check correctness\n");
+	// check number of elements
+	assert(mNbFaces == int(mFaces.size()));
+	assert(mNbEdges == int(mEdges.size()));
+	assert(mNbVertices == int(mVertices.size()));
+
+	// check turn right
+	std::vector<mesh::Edge*> surEdges;
+	// turn arround every faces
+	// printf("\nBeg check faces\n");
+	for(int i=0; i<mNbFaces; i++){
+		surEdges = mFaces[i]->getSurroundingEdges();
+		assert(!mesh::Edge::hasDoubles(surEdges));
+	}
+	// printf("End check faces\n");
+
+	// turn arround every edges
+	// printf("\nBeg check edges\n");
+	for(int i=0; i<mNbEdges; i++){
+		surEdges = mEdges[i]->mFaceLeft->getSurroundingEdges();
+		assert(!mesh::Edge::hasDoubles(surEdges));
+		surEdges = mEdges[i]->mFaceRight->getSurroundingEdges();
+		assert(!mesh::Edge::hasDoubles(surEdges));
+	}
+	// printf("End check edges\n");
+
+
+	// turn arround every vertices
+	// printf("\nBeg check vertices\n");
+	for(int i=0; i<mNbVertices; i++){
+		surEdges = mVertices[i]->mEdge->mFaceLeft->getSurroundingEdges();
+		assert(!mesh::Edge::hasDoubles(surEdges));
+		surEdges = mVertices[i]->mEdge->mFaceRight->getSurroundingEdges();
+		assert(!mesh::Edge::hasDoubles(surEdges));
+	}
+	// printf("End check vertices\n");
+
+	// check reversed
+	// printf("\nBeg check reversed\n");
+	for(int i=0; i<mNbEdges; i++){
+		mesh::Edge* curEdge = mEdges[i];
+		mesh::Edge* revEdge = curEdge->mReverseEdge;
+		assert(curEdge->mReverseEdge);
+		assert(curEdge->mVertexOrigin      == revEdge->mVertexDestination);
+		assert(curEdge->mVertexDestination == revEdge->mVertexOrigin);
+		assert(curEdge->mFaceLeft  == revEdge->mFaceRight);
+		assert(curEdge->mFaceRight == revEdge->mFaceLeft);
+		assert(curEdge->mEdgeLeftCCW  == revEdge->mEdgeRightCCW->mReverseEdge);
+		assert(curEdge->mEdgeLeftCW   == revEdge->mEdgeRightCW->mReverseEdge);
+		assert(curEdge->mEdgeRightCCW == revEdge->mEdgeLeftCCW->mReverseEdge);
+		assert(curEdge->mEdgeRightCW  == revEdge->mEdgeLeftCW->mReverseEdge);
+	}
+	// printf("End check reversed\n");
+
+
+	// check edges' edges
+	// printf("\nBeg check unique edges\n");
+	assert(!mesh::Vertex::twoSameEdges(mEdges, mNbVertices));
+	// printf("End check unique edges\n");
+
+	// printf("\nEnd check correctness\n");
+}
+
 std::vector<std::string> mesh::Mesh::verticesToString() const {
 	std::vector<std::string> strings;
 	for(int i=0; i<int(mVertices.size()); i++){
@@ -50,6 +114,10 @@ std::vector<std::string> mesh::Mesh::toString() const{
 	result.insert(result.end(), edges.begin(), edges.end());
 
 	return result;
+}
+
+void mesh::Mesh::printStats() const{
+	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
 }
 
 
@@ -134,56 +202,6 @@ mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
 	return mesh::Mesh::objToMesh(vertices, faces);
 }
 
-bool mesh::Mesh::edgesAlreadyVisited(std::vector<int> & face, const std::vector<std::vector<int>> & edgeTable, int position){
-	bool res = false;
-	int size = int(face.size());
-
-	// printf("face: a %d, b %d, c %d, pos: %d\n", face[0], face[1], face[2], position);
-
-	// test if already visited
-	for(int i=0; i<size; i++){
-		// printf("edgeTable[%d][%d]:%d\n", face[i], face[(i+1)%size], edgeTable[face[i]][face[(i+1) % size]]);
-		if(edgeTable[face[i]][face[(i+1) % size]] != -1) res = true;
-	}
-	if(!res) return false;
-
-	// modify current face list
-	int tmp;
-	switch (position) {
-		case 0: // abc -> acb
-			tmp = face[1];
-			face[1] = face[2];
-			face[2] = tmp; 
-			break;
-		case 1: // acb -> bac
-			tmp = face[0];
-			face[0] = face[2];
-			face[2] = face[1];
-			face[1] = tmp;
-			break;
-		case 2: // bac -> bca
-			tmp = face[1];
-			face[1] = face[2];
-			face[2] = tmp; 
-			break;
-		case 3: // bca -> cab
-			tmp = face[0];
-			face[0] = face[1];
-			face[1] = face[2];
-			face[2] = tmp;
-			break;
-		case 4: // cab -> cba
-			tmp = face[1];
-			face[1] = face[2];
-			face[2] = tmp; 
-			break;
-		default:
-			assert(false);
-	}
-
-	return true;
-}
-
 
 mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::vector<std::vector<int>> &faces){
 	// create mesh::Vertex and save to vertexlist
@@ -212,18 +230,11 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 	// printf("nbVertices: %d, nbFaces: %d\n", m, int(faces.size()));
 
 	std::vector<std::vector<int>> edgeTable(m, std::vector<int>(m, -1));
-	// a table to not if an edge is a reversed or a direct one
 
-	for (int i = 0; i < int(faces.size()); i++) 
-	{
+	for (int i = 0; i < int(faces.size()); i++) {
 		mesh::Face* f = faceList[i];
-
-		// reorder faces in the list
-		int position = 0;
-		while(edgesAlreadyVisited(faces[i], edgeTable, position++));
 		
-		for (int v = 0; v < vnum; v++) 
-		{
+		for (int v = 0; v < vnum; v++) {
 			int v0 = faces[i][v];
 			int v1 = faces[i][(v+1)%vnum];
 
@@ -240,12 +251,13 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 			vStart = vertexList[v0];
 			vEnd = vertexList[v1];
 			eCur = edgeList[idx];
+
 			eCur->mVertexOrigin = vStart;
 			eCur->mVertexDestination = vEnd;
 
-			eCur->mEdgeLeftCCW = eNext;
-			eCur->mEdgeLeftCW = ePrev;
-			eCur->mFaceLeft = f;
+			eCur->mEdgeRightCW = eNext;
+			eCur->mEdgeRightCCW = ePrev;
+			eCur->mFaceRight = f;
 
 			edgeTable[v0][v1] = idx;
 			int revIdx = edgeTable[v1][v0];
@@ -255,25 +267,22 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 			}
 			f->mEdge = eCur;
 			vStart->mEdge = eCur;
-			// v_end->mEdge = edge; 
 		}
 	}
 
 	// save left according to the table
-	for (int i = 0; i < m; i++)
-	{
-		for (int j = 0; j < m; j++)
-		{
+	for (int i = 0; i < m; i++){
+		for (int j = 0; j < m; j++){
 			int idx = edgeTable[i][j];
-			if (idx != -1)
-			{
+			if (idx != -1){
 				mesh::Edge *edge = edgeList[idx];
 				int flipIdx = edgeTable[j][i];
 				// printf("idx: %d, flip: %d\n", idx, flipIdx);
 				mesh::Edge *edgeFlip = edgeList[flipIdx];
-					edge->mEdgeRightCW = edgeFlip->mEdgeLeftCW->mReverseEdge;
-					edge->mEdgeRightCCW = edgeFlip->mEdgeLeftCCW->mReverseEdge; 
-					edge->mFaceRight = edgeFlip->mFaceLeft;
+
+				edge->mEdgeLeftCW = edgeFlip->mEdgeRightCW->mReverseEdge;
+				edge->mEdgeLeftCCW = edgeFlip->mEdgeRightCCW->mReverseEdge; 
+				edge->mFaceLeft = edgeFlip->mFaceRight;
 			}
 		}
 	}
@@ -393,6 +402,7 @@ void mesh::Mesh::removeFaceFromList(mesh::Face* face){
 		if(mFaces[i]->mId == face->mId){
 			mFaces.erase(mFaces.begin()+i);
 			mNbFaces--;
+			delete(face);
 			return;
 		}
 	}
@@ -404,18 +414,20 @@ void mesh::Mesh::removeEdgeFromList(mesh::Edge* edge){
 			// delete edge;
 			mEdges.erase(mEdges.begin()+i);
 			mNbEdges--;
+			delete(edge);
 			return;
 		}
 	}
 }
 
 void mesh::Mesh::removeEdge(mesh::Edge* edge){
+	// TODO reorient edges
 	// print();
 	// printf("\n");
 	// edge->print();
 	// fixing vertices
 	if(edge->mVertexOrigin->mEdge->mId == edge->mId)
-		edge->mVertexOrigin->mEdge = edge->mEdgeLeftCW;
+		edge->mVertexOrigin->mEdge = edge->mEdgeRightCCW;
 	if(edge->mVertexDestination->mEdge->mId == edge->mId)
 		edge->mVertexDestination->mEdge = edge->mEdgeRightCW;
 
@@ -428,14 +440,13 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 		// rightFace->print();
 		// update faces' edges to update the new face
 		if(leftFace->mEdge->mId == edge->mId)
-			leftFace->mEdge = edge->mEdgeLeftCW;
+			leftFace->mEdge = edge->mEdgeLeftCW->mReverseEdge;
 		if(rightFace->mEdge->mId == edge->mId)
 			rightFace->mEdge = edge->mEdgeRightCW;
 
 		// fusioning faces
-		mesh::Face* newFace = leftFace->mergeFace(rightFace);
+		mesh::Face* newFace = rightFace->mergeFace(leftFace);
 		// edge->print();
-		mNbFaces++;
 
 		// deleting the faces from the list
 		removeFaceFromList(leftFace);
@@ -445,6 +456,7 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 
 		// adding the new face to the list
 		mFaces.push_back(newFace);
+		mNbFaces++;
 	}
 
 	// fixing edges
@@ -454,8 +466,14 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 
 std::vector<mesh::Edge*> mesh::Mesh::getAllEdgesToDelete(){
 	std::vector<mesh::Edge*> edgeList;
-	for(int i=0; i<int(mEdges.size()); i++){
-		if(mEdges[i]->mToDelete) edgeList.push_back(mEdges[i]);
+	for(int i=0; i<mNbEdges; i++){
+		if(mEdges[i]->mToDelete) {
+			assert(mEdges[i]->mReverseEdge->mToDelete);
+			edgeList.push_back(mEdges[i]->mReverseEdge);
+			edgeList.push_back(mEdges[i]);
+			mEdges[i]->mToDelete = false;
+			mEdges[i]->mReverseEdge->mToDelete = false;
+		}
 	}
 	return edgeList;
 }
@@ -463,6 +481,7 @@ std::vector<mesh::Edge*> mesh::Mesh::getAllEdgesToDelete(){
 void mesh::Mesh::removeMarkedEdges(){
 	// making a list of edges to remove
 	std::vector<mesh::Edge*> edgeList = getAllEdgesToDelete();
+	assert(getAllEdgesToDelete().size() % 2 == 0);
 
 	// print();
 	// removing each edge of the list
@@ -478,18 +497,24 @@ void mesh::Mesh::removeMarkedEdges(){
 void mesh::Mesh::triToQuad(){
 	// print();
 	triToQuadRemovalMarkingPhase();
+	printStats();
+	// printf("\nEdgesToDelete: %d", int(getAllEdgesToDelete().size()));
+	// checkCorrectness();
 	// print();
 	removeMarkedEdges();
+	printStats();
+	// checkCorrectness();
 	// print();
 	assert(getAllEdgesToDelete().size() == 0);
 
 	// subdivide all remaining triangles
 	assert(howManyTriangles() % 2 == 0);
 
-	// triToPureQuadMarkingPhase();
 	triToPureQuad();
-	// removeMarkedEdges();
+	printStats();
 	assert(howManyTriangles() == 0);
+
+	// print();
 }
 
 mesh::Face* mesh::Mesh::getTriangle() const {
@@ -510,7 +535,12 @@ int mesh::Mesh::howManyTriangles() const {
 
 void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2){
 	std::vector<mesh::Edge*> surEdges = face->getSurroundingEdges();
-	int nbSurEdges = surEdges.size()>>1;
+	int nbSurEdges = surEdges.size() >> 1;
+	// for(int i=0; i<nbSurEdges; i++){
+	// 	// assert(surEdges[i]->mFaceLeft->mId == face->mId);
+	// 	printf("surEdge[%d]\n", i);
+	// 	surEdges[i]->print();
+	// }
 
 	// initiate the new edges
 	mesh::Edge* edge = new mesh::Edge();
@@ -521,8 +551,8 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 	mesh::Face* halfFace2 = new mesh::Face();
 
 	// update new faces
-	halfFace1->mEdge = edgeRev;
-	halfFace2->mEdge = edge;
+	halfFace1->mEdge = edge;
+	halfFace2->mEdge = edgeRev;
 
 	// update first edge
 	edge->mVertexOrigin = v1;
@@ -530,44 +560,56 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 	edge->mFaceLeft = halfFace2;
 	edge->mFaceRight = halfFace1;
 	edge->mReverseEdge = edgeRev;
+	edgeRev->mReverseEdge = edge;
 
 	// update first edge neighbours
 	// get the edge that goes into v1
 	int startIdx = 0;
-	while(mEdges[startIdx]->mVertexDestination->mId != v1->mId) startIdx++;
+	while(surEdges[startIdx]->mVertexDestination->mId != v1->mId) startIdx++;
 
 	// the current face we're surrounding
-	int curFace = 2;
+	int curFace = 1;
 	for(int i=startIdx; i<nbSurEdges+startIdx; i++){
 		int idx = i%nbSurEdges;
-		
+		// printf("\nidx: %d\n", idx);
+		// surEdges[idx]->print();
+
 		// update new edge
 		if(surEdges[idx]->mVertexDestination->mId == v1->mId) {
-			edge->mEdgeLeftCW = surEdges[idx];
-			curFace = 2;
+			edge->mEdgeRightCCW = surEdges[idx];
+			surEdges[idx]->mEdgeRightCW = edge;
+			surEdges[idx]->mReverseEdge->mEdgeLeftCW = edge->mReverseEdge;
+			curFace = 1;
 		}
 		if(surEdges[idx]->mVertexOrigin->mId == v2->mId) {
-			edge->mEdgeLeftCCW = surEdges[idx];
-			curFace = 2;
+			edge->mEdgeRightCW = surEdges[idx];
+			surEdges[idx]->mEdgeRightCCW = edge;
+			surEdges[idx]->mReverseEdge->mEdgeLeftCCW = edge->mReverseEdge;
+			curFace = 1;
 		}
 		if(surEdges[idx]->mVertexDestination->mId == v2->mId) {
-			edge->mEdgeRightCW = surEdges[idx]->mReverseEdge;
-			curFace = 1;
+			edge->mEdgeLeftCCW = surEdges[idx]->mReverseEdge;
+			surEdges[idx]->mEdgeRightCW = edge->mReverseEdge;
+			surEdges[idx]->mReverseEdge->mEdgeLeftCW = edge;
+			curFace = 2;
 		}
 		if(surEdges[idx]->mVertexOrigin->mId == v1->mId) {
-			curFace = 1;
+			edge->mEdgeLeftCW = surEdges[idx]->mReverseEdge;
+			surEdges[idx]->mEdgeRightCCW = edge->mReverseEdge;
+			surEdges[idx]->mReverseEdge->mEdgeLeftCCW = edge;
+			curFace = 2;
 		}
 
 		// update old edge
+		assert(surEdges[idx]->mFaceRight->mId == face->mId);
 		switch(curFace){
-			case 2:
-				surEdges[idx]->mFaceLeft = halfFace2;
-				surEdges[idx]->mReverseEdge->mFaceRight = halfFace2;
-				break;
 			case 1:
-				// update old edge
-				surEdges[idx]->mFaceLeft = halfFace2;
-				surEdges[idx]->mReverseEdge->mFaceRight = halfFace2;
+				surEdges[idx]->mFaceRight = halfFace1;
+				surEdges[idx]->mReverseEdge->mFaceLeft = halfFace1;
+				break;
+			case 2:
+				surEdges[idx]->mFaceRight = halfFace2;
+				surEdges[idx]->mReverseEdge->mFaceLeft = halfFace2;
 				break;
 			default:
 				assert(false);
@@ -603,6 +645,17 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 	surEdges = halfFace2->getSurroundingEdges();
 	if(surEdges.size() != 6) halfFace2->mIsTriangle = false;
 
+	// printf("\nnewEdge:\n");
+	// edge->print();
+	// printf("newRevEdge:\n");
+	// edgeRev->print();
+	// printf("newFace1:\n");
+	// halfFace1->mEdge->print();
+	// halfFace1->print();
+	// printf("newFace2:\n");
+	// halfFace2->mEdge->print();
+	// halfFace2->print();
+
 }
 
 std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle) const {
@@ -617,11 +670,13 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 	std::map<int, int> status;
 	// initiate a dictionary containing the face's id as keys and the parent in the search as value
 	std::map<int, mesh::Face*> parents;
+	// assert(mNbFaces == int(mFaces.size()));
 	for(int i=0; i<mNbFaces; i++){
 		status[mFaces[i]->mId] = UNVISITED;
 		parents[mFaces[i]->mId] = nullptr;
 	}
 	parents[triangle->mId] = nullptr;
+	status[triangle->mId] = ONGOING;
 
 	// initiate the queue for the BFS search
 	std::queue<mesh::Face*> queue;
@@ -632,6 +687,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 	int closestTriangleId = -1;
 	mesh::Face* pathFace = nullptr;
 	// print();
+	// printf("how many triangle: %d\n", howManyTriangles());
 
 	while(!queue.empty()){
 		// remove current face from queue
@@ -641,14 +697,15 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 		// curFace->print();
 
 		// for each neighbours
-		std::vector<mesh::Face*> neighbours = triangle->getSurroundingFaces();
+		std::vector<mesh::Face*> neighbours = curFace->getSurroundingFaces();
+		// printf("\nnbNeighbours: %d\n", int(neighbours.size()));
 		for(int i=0; i<int(neighbours.size()); i++){
 			int curNeighbourFaceId = neighbours[i]->mId;
 			// printf("\nCur Neighbour:\n");
 			// neighbours[i]->print();
 
-			// check if we've found a triangle
-			if(neighbours[i]->isTriangle()){
+			// check if we've found a triangle different from the origin triangle
+			if(neighbours[i]->isTriangle() && status[curNeighbourFaceId] == UNVISITED){
 				quit = true;
 				// save the face and update it's parent
 				closestTriangleId = curNeighbourFaceId;
@@ -700,6 +757,8 @@ void mesh::Mesh::triToPureQuad(){
 	*/
 	mesh::Face* curTriangle = getTriangle();
 	while(curTriangle != nullptr){
+		// printf("\nwhile curTriangle\n");
+		// checkCorrectness();
 		// get a list of faces between it and another triangle using BFS
 		std::vector<mesh::Face*> path = pathToClosestTriangle(curTriangle);
 
@@ -707,7 +766,10 @@ void mesh::Mesh::triToPureQuad(){
 		mesh::Face* curQuad = nullptr;
 		mesh::Edge* edgeToRemove = nullptr;
 		mesh::Edge* revEdgeToRemove = nullptr;
+		bool shouldRemoveEdge = true;
+
 		// print();
+		// printf("\n###################### NEW PATH #######################\n");
 		while(path.size() != 0){
 			// get current triangle and current quad neighbour
 			curTri = path.back();
@@ -722,6 +784,28 @@ void mesh::Mesh::triToPureQuad(){
 			// printf("\nCurQuad:\n");
 			// curQuad->print();
 
+			// if two edges in common, add a new edge to form 3 triangles and find another path
+			int nbSharedEdges = curTri->getNumberOfSharedEdges(curQuad);
+			// printf("\nNbSharedEdges: %d\n", nbSharedEdges);
+			if( nbSharedEdges == 4){
+				// printf("\nAdd triangle\n");
+				std::vector<mesh::Vertex*> unconnected = curTri->getUnconnectedVertices(curQuad);
+				// printf("\nNbUnconnected: %d\n", int(unconnected.size()));
+				mesh::Vertex* v1 = unconnected[0];
+				assert(v1 != nullptr);
+				// printf("\nv1:\n");
+				// v1->print();
+				mesh::Vertex* v2 = unconnected[1];
+				assert(v2 != nullptr);
+				// printf("v2:\n");
+				// v2->print();
+				std::vector<mesh::Vertex*> surTmp = curQuad->getSurroundingVertices();
+				assert(v1->isInList(surTmp) && v2->isInList(surTmp));
+				createEdge(curQuad, v1, v2);
+				shouldRemoveEdge = false;
+				break;
+			}
+
 			// find the edges to remove
 			edgeToRemove = curTri->getEdgeBetween(curQuad);
 			assert(edgeToRemove != nullptr);
@@ -733,26 +817,47 @@ void mesh::Mesh::triToPureQuad(){
 
 			mesh::Face* nextQuad = path.back();
 			assert(nextQuad != nullptr);
+			// printf("\nNextQuad:\n");
+			// nextQuad->print();
 
 			// find the future vertices from which we'll add new edges
 			mesh::Vertex* v1 = mesh::Vertex::getCommonVertex(curTri, curQuad, nextQuad);
-			mesh::Vertex* v2 = mesh::Vertex::getIsolatedVertex(curQuad, curTri, nextQuad);
+			if(v1 == nullptr){ // three faces not sticked together
+				v1 = mesh::Vertex::getCommonVertices(curTri, curQuad)[0];
+			} else if(int(mesh::Vertex::getCommonVertices(curQuad, nextQuad).size()) >= 3){
+				v1 = edgeToRemove->mVertexOrigin->mId == v1->mId ? edgeToRemove->mVertexDestination : edgeToRemove->mVertexOrigin;
+			}
+			mesh::Vertex* v2 = mesh::Vertex::getOppositeVertex(curQuad,v1);
 			// test if the two chosen vertices are correct 
 			assert(v1 != nullptr);
 			assert(v2 != nullptr);
 			std::vector<mesh::Vertex*> surTmp = curQuad->getSurroundingVertices();
 			assert(v1->isInList(surTmp) && v2->isInList(surTmp));
 
+			// printf("\nv1:\n");
+			// v1->print();
+			// printf("v2:\n");
+			// v2->print();
+
 			// remove the edges
+			// printf("\nEdge to remove:\n");
+			// edgeToRemove->print();
+			// printf("RevEdge to remove:\n");
+			// revEdgeToRemove->print();
 			removeEdge(edgeToRemove);
 			removeEdge(revEdgeToRemove);
 
 			// get the newly created face
 			mesh::Face* newPoly = mFaces.back(); // the last added 
+			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
+			// printf("\nNewPoly:\n");
+			// newPoly->print();
 			createEdge(newPoly, v1, v2);
 
 			mesh::Face* newTriangle = mFaces.back(); // the last added
 			if(newTriangle->isQuad()) newTriangle = mFaces[mNbFaces-2];
+			// printf("\nNew Triangle:\n");
+			// newTriangle->print();
 			assert(newTriangle->isTriangle());
 
 			// putting the new triangle at the end of the path
@@ -760,11 +865,18 @@ void mesh::Mesh::triToPureQuad(){
 
 		}
 
-		// remove the edges
-		assert(edgeToRemove != nullptr);
-		assert(revEdgeToRemove != nullptr);
-		removeEdge(edgeToRemove);
-		removeEdge(revEdgeToRemove);
+		if(shouldRemoveEdge){
+			// remove the edges
+			assert(edgeToRemove != nullptr);
+			assert(revEdgeToRemove != nullptr);
+			// printf("\nEdge to remove:\n");
+			// edgeToRemove->print();
+			// printf("RevEdge to remove:\n");
+			// revEdgeToRemove->print();
+			removeEdge(edgeToRemove);
+			removeEdge(revEdgeToRemove);
+			// printf("\ndone removing\n");
+		}
 
 		// get a new triangle
 		curTriangle = getTriangle();
