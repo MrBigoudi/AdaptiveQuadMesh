@@ -19,7 +19,7 @@ DOCCONF := Doxyfile
 DOCGEN := doxygen
 
 # Create the list of directories
-DIRS = main maths mesh
+DIRS = mesh main opengl opengl/glfw opengl/glad opengl/shaders utils maths maths/glm scene scene/object
 SOURCEDIRS = $(foreach dir, $(DIRS), $(addprefix $(SOURCEDIR)/, $(dir)))
 TARGETDIRS = $(foreach dir, $(DIRS), $(addprefix $(BUILDDIR)/, $(dir)))
 
@@ -44,7 +44,7 @@ CXX = g++
 
 # set the flags
 CXXFLAGS := -ggdb3 -Wall -Wextra
-LDFLAGS := -Llib
+LDFLAGS := -Llib -lGL -lglfw
 LDLIBS := -lm
 
 # OS specific part
@@ -65,6 +65,9 @@ endif
 # Remove space after separator
 PSEP = $(strip $(SEP))
 
+TESTDIR := tests
+MAINDIR := main
+
 TARGET := main.app
 
 VERBOSE = TRUE
@@ -82,7 +85,7 @@ $(1)/%.o: %.cpp
 	$(HIDE)$(CXX) $(CXXFLAGS) -c $$(INCLUDES) -o $$(subst /,$$(PSEP),$$@) $$(subst /,$$(PSEP),$$<) -MMD
 endef
 
-.PHONY: all clean dirs doc
+.PHONY: all clean dirs doc main test
 
 all: help
 

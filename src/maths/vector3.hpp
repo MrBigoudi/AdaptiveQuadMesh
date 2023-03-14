@@ -4,6 +4,8 @@
 #include <iostream>
 #include <cassert>
 
+#include "glm/glm.hpp"
+
 namespace maths{
 
 /**
@@ -270,6 +272,13 @@ class Vector3{
             else
                 sprintf(buffer, "x: %f, y: %f, z: %f", mVect[0], mVect[1], mVect[2]);
             return buffer;
+        }
+
+        /**
+         * Cast a vector into a glm vector
+        */
+        glm::vec3 toGlm() const {
+            return glm::vec3(mVect[0], mVect[1], mVect[2]);
         }
 };
 

@@ -2,7 +2,7 @@
 
 #include "edge.hpp"
 #include "face.hpp"
-#include "vector3.hpp"
+#include "maths.hpp"
 
 namespace mesh{
 
@@ -119,6 +119,12 @@ class Vertex{
          * @return True if there exists such edges
         */
         static bool twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices);
+
+        /**
+         * Cast a vertex into a glm vector
+         * @return The vertex as a glm vector
+        */
+        glm::vec3 toGlm() const;
 };
 
 }

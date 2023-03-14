@@ -119,3 +119,7 @@ bool mesh::Vertex::twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices){
     }
     return false;
 }
+
+glm::vec3 mesh::Vertex::toGlm() const{
+    return mCoords->toGlm();
+}
