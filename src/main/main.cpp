@@ -12,6 +12,7 @@ scene::Camera camera(maths::Vector3(0.0f, 0.0f, 1.0f));
 const float ROTATION_ANGLE = 10.0f;
 float rotationAngle = 0.0f;
 scene::RotationAxe rotationAxe = scene::x;
+float lineWidth = 1.0f;
 
 bool toQuad = false;
 
@@ -55,10 +56,10 @@ void processInput(GLFWwindow *window){
         camera.processKeyboardInput(scene::CAM_FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
         camera.processKeyboardInput(scene::CAM_BACKWARD, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.processKeyboardInput(scene::CAM_LEFT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.processKeyboardInput(scene::CAM_RIGHT, deltaTime);
+    // if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    //     camera.processKeyboardInput(scene::CAM_LEFT, deltaTime);
+    // if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    //     camera.processKeyboardInput(scene::CAM_RIGHT, deltaTime);
 
     // rotate the object
     rotationAngle = 0.0f;
@@ -78,16 +79,29 @@ void processInput(GLFWwindow *window){
         rotationAngle = ROTATION_ANGLE;
         rotationAxe = scene::x;
     }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+        rotationAngle = -ROTATION_ANGLE;
+        rotationAxe = scene::y;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+        rotationAngle = ROTATION_ANGLE;
+        rotationAxe = scene::y;
+    }
 
     // transform the object in a quad
     if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) toQuad = true;
+
+    // modify line width
+    if(glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) lineWidth += 0.1f;
+    if(glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) lineWidth -= 0.1f;
+
 }
 
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 
     opengl::initGLFW();
-    GLFWwindow* window = opengl::createWindow(SCR_WIDTH, SCR_HEIGHT, "test", GLFW_TRUE);
+    GLFWwindow* window = opengl::createWindow(SCR_WIDTH, SCR_HEIGHT, "AdaptiveQuadMesh", GLFW_TRUE);
     opengl::initGLAD();
     // glfwSetCursorPosCallback(window, mouse_callback);
     // glfwSetScrollCallback(window, scroll_callback);
@@ -96,8 +110,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     opengl::ResourceManager::loadShader("src/shaders/vert.glsl", "src/shaders/frag.glsl", "objectShader");
 
     // scene::Object object = scene::Object("media/objects/armadillo.obj");
-    scene::Object object = scene::Object("media/objects/chess_piece.obj");
+    // scene::Object object = scene::Object("media/objects/chess_piece.obj");
     // scene::Object object = scene::Object("media/objects/venus.obj");
+    scene::Object object = scene::Object("media/objects/garg.obj");
 
     object.initCamera(&camera);
 
@@ -117,8 +132,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 
         if(toQuad){
             object.toQuadMesh();
-            object.mMesh->printStats();
+            // object.mMesh->printStats();
             object.initCamera(&camera);
+            toQuad = false;
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -133,7 +149,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
         model = glm::mat4(1.0f);
 
         object.update(deltaTime, rotationAngle, rotationAxe, glm::vec3(1.0f));
-        object.draw("objectShader", model, view, projection);
+        object.draw("objectShader", model, view, projection, lineWidth);
 
         // unbind vao
         glBindVertexArray(0);

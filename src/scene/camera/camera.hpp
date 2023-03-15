@@ -178,7 +178,7 @@ class Camera{
             maths::Vector3 front = maths::Vector3(0.0f, 0.0f, -1.0f),
             maths::Vector3 worldUp = maths::Vector3(0.0f, 1.0f, 0.0f),
             float speed = SPEED, float sensitivity = SENSITIVITY, float zoom = ZOOM, float yaw = YAW, float pitch = PITCH,
-            bool fps = FPS, float zmin = 0.1f, float zmax = 1000.0f, float fov = glm::radians(45.0f), 
+            bool fps = FPS, float zmin = 0.1f, float zmax = 100.0f, float fov = glm::radians(45.0f), 
             int width = SCR_WIDTH, int height = SCR_HEIGHT){
             mPosition = position;
             mFront = front;

@@ -25,9 +25,14 @@ class Object{
         std::vector<float> mVertices;
 
         /**
-         * The list of indices
+         * The list of indices for the faces
         */
         std::vector<unsigned int> mIndices;
+
+        /**
+         * The list of indices for the lines
+        */
+        std::vector<unsigned int> mLinesIndices;
 
         /**
          * The mesh
@@ -37,7 +42,7 @@ class Object{
         /**
          * The vao, vbo and ebo
         */
-        GLuint mVao, mVbo, mEbo;
+        GLuint mVao, mVbo, mEbo, mVaoLines, mEboLines;
 
         /**
          * The transformation matrix
@@ -91,6 +96,12 @@ class Object{
         const unsigned int* getIndices() const;
 
         /**
+         * Get the indices to draw lines
+         * @return The object's line indices
+        */
+        const unsigned int* getLinesIndices() const;
+
+        /**
          * Get the number of vertices
          * @return The number of vertices
         */
@@ -101,6 +112,12 @@ class Object{
          * @return The number of indices
         */
         unsigned int nbIndices() const;
+
+        /**
+         * Get the number of indices for the lines
+         * @return The number of indices for the lines
+        */
+        unsigned int nbLinesIndices() const;
 
         /**
          * Create an obj file from the object
@@ -125,8 +142,9 @@ class Object{
          * @param model The model matrix
          * @param view The view matrix
          * @param proj The projection matrix
+         * @param linesWidth The lines' width
         */
-        void draw(std::string shaderName, glm::mat4 model, glm::mat4 view, glm::mat4 proj) const;
+        void draw(std::string shaderName, glm::mat4 model, glm::mat4 view, glm::mat4 proj, float linesWidth) const;
 
     private:
         /**
@@ -143,6 +161,17 @@ class Object{
          * Init the object's dimensions
         */
         void initDim();
+
+        /**
+         * Clean the buffer objects
+        */
+        void cleanVao();
+
+        /**
+         * Empty the lists
+        */
+        void cleanLists();
+
 
 };
 
