@@ -7,12 +7,13 @@
 #include "maths.hpp"
 
 // camera
-scene::Camera camera(maths::Vector3(0.0f, 0.0f, 100.0f));
+scene::Camera camera(maths::Vector3(0.0f, 0.0f, 1.0f));
 
-// transformation matrix
-glm::mat4 trans = glm::mat4(1.0f);
+const float ROTATION_ANGLE = 10.0f;
+float rotationAngle = 0.0f;
+scene::RotationAxe rotationAxe = scene::x;
 
-float rotationAngle = glm::radians(10.0f);
+bool toQuad = false;
 
 // timing
 float deltaTime = 0.0f;	// time between current frame and last frame
@@ -45,9 +46,11 @@ void mouse_callback([[maybe_unused]] GLFWwindow* window, double xposIn, double y
 }
 
 void processInput(GLFWwindow *window){
+    // close the window
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
+    // move the camera
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
         camera.processKeyboardInput(scene::CAM_FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
@@ -56,14 +59,28 @@ void processInput(GLFWwindow *window){
         camera.processKeyboardInput(scene::CAM_LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.processKeyboardInput(scene::CAM_RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        trans = glm::rotate(trans, -rotationAngle, glm::vec3(0.0f, 0.0f, 1.0f));
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        trans = glm::rotate(trans, rotationAngle, glm::vec3(0.0f, 0.0f, 1.0f));
-    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
-        trans = glm::rotate(trans, -rotationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
-    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
-        trans = glm::rotate(trans, rotationAngle, glm::vec3(1.0f, 0.0f, 0.0f));
+
+    // rotate the object
+    rotationAngle = 0.0f;
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS){
+        rotationAngle = -ROTATION_ANGLE;
+        rotationAxe = scene::z;
+    }
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS){
+        rotationAngle = ROTATION_ANGLE;
+        rotationAxe = scene::z;
+    }
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS){
+        rotationAngle = -ROTATION_ANGLE;
+        rotationAxe = scene::x;
+    }
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS){
+        rotationAngle = ROTATION_ANGLE;
+        rotationAxe = scene::x;
+    }
+
+    // transform the object in a quad
+    if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) toQuad = true;
 }
 
 
@@ -76,35 +93,17 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     // glfwSetScrollCallback(window, scroll_callback);
     // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-    opengl::Shader shader = opengl::Shader("src/shaders/vert.glsl", "src/shaders/frag.glsl");
+    opengl::ResourceManager::loadShader("src/shaders/vert.glsl", "src/shaders/frag.glsl", "objectShader");
+
+    // scene::Object object = scene::Object("media/objects/armadillo.obj");
+    scene::Object object = scene::Object("media/objects/chess_piece.obj");
+    // scene::Object object = scene::Object("media/objects/venus.obj");
+
+    object.initCamera(&camera);
 
     glEnable(GL_DEPTH_TEST);
 
-    // scene::Object object = scene::Object("media/objects/venus.obj");
-    scene::Object object = scene::Object("media/objects/chess_piece.obj");
-
-    const float* vertices = object.getVertices();
-    const unsigned int* indices = object.getIndices();
-
     glClearColor(0.21f, 0.3f, 0.3f, 1.0f);
-
-    GLuint vboId, eboId, vaoId;
-    glGenVertexArrays(1, &vaoId);
-    glGenBuffers(1, &vboId);
-    glGenBuffers(1, &eboId);
-    // bind vao
-    glBindVertexArray(vaoId);
-    // copy vertices in vbo
-    glBindBuffer(GL_ARRAY_BUFFER, vboId);
-    glBufferData(GL_ARRAY_BUFFER, object.nbVertices()*sizeof(float), vertices, GL_STATIC_DRAW);
-    // copy indices in ebo
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, eboId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, object.nbIndices()*sizeof(unsigned int), indices, GL_STATIC_DRAW);
-    // set the vertex attrib pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // draw only surrounding lines
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
     // MVP
     glm::mat4 projection = camera.getProjectionMatrix();
@@ -115,32 +114,33 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     while(!glfwWindowShouldClose(window)){
         processInput(window);
         glfwPollEvents();
+
+        if(toQuad){
+            object.toQuadMesh();
+            object.mMesh->printStats();
+            object.initCamera(&camera);
+        }
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        shader.use();
+        // MVP
         projection = camera.getProjectionMatrix();
         view = camera.getViewMatrix();
         model = glm::mat4(1.0f);
-        shader.setMat4fv("model", model);
-        shader.setMat4fv("view", view);
-        shader.setMat4fv("projection", projection);
-        shader.setMat4fv("trans", trans);
 
-        glBindVertexArray(vaoId);
-        glDrawElements(GL_TRIANGLES, object.nbIndices(), GL_UNSIGNED_INT, 0);
+        object.update(deltaTime, rotationAngle, rotationAxe, glm::vec3(1.0f));
+        object.draw("objectShader", model, view, projection);
+
         // unbind vao
         glBindVertexArray(0);
 
         glfwSwapBuffers(window);
     }
 
-    glDeleteVertexArrays(1, &vaoId);
-    glDeleteBuffers(1, &vboId);
-    glDeleteBuffers(1, &eboId);
     glfwTerminate();
 
     exit(EXIT_SUCCESS);

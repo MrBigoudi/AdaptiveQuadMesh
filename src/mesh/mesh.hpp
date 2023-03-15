@@ -137,6 +137,51 @@ class Mesh{
         */
         void printStats() const;
 
+        /**
+         * Get the minimum height of one of the object's vertices
+        */
+        float getMinHeight() const;
+
+        /**
+         * Get the maximum height of one of the object's vertices
+        */
+        float getMaxHeight() const;
+
+        /**
+         * Get the minimum width of one of the object's vertices
+        */
+        float getMinWidth() const;
+
+        /**
+         * Get the maximum width of one of the object's vertices
+        */
+        float getMaxWidth() const;
+
+        /**
+         * Get the minimum depth of one of the object's vertices
+        */
+        float getMinDepth() const;
+
+        /**
+         * Get the maximum depth of one of the object's vertices
+        */
+        float getMaxDepth() const;
+
+        /**
+         * Get the height of the object
+        */
+        float getHeight() const;
+
+        /**
+         * Get the width of the object
+        */
+        float getWidth() const;
+
+        /**
+         * Get the depth of the object
+        */
+        float getDepth() const;
+
 
     private:
         /**

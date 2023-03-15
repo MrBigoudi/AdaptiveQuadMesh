@@ -884,6 +884,111 @@ void mesh::Mesh::triToPureQuad(){
 }
 
 
+float mesh::Mesh::getHeight() const {
+	float minY = INFINITY;
+	float maxY = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curY = mVertices[i]->mCoords->y();
+		if( curY < minY) minY = curY;
+		if( curY > maxY) maxY = curY;
+	}
+
+	return std::abs(maxY-minY);
+}
+
+float mesh::Mesh::getWidth() const {
+	float minX = INFINITY;
+	float maxX = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curX = mVertices[i]->mCoords->x();
+		if( curX < minX) minX = curX;
+		if( curX > maxX) maxX = curX;
+	}
+
+	return std::abs(maxX-minX);
+}
+
+float mesh::Mesh::getDepth() const {
+	float minZ = INFINITY;
+	float maxZ = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curZ = mVertices[i]->mCoords->z();
+		if( curZ < minZ) minZ = curZ;
+		if( curZ > maxZ) maxZ = curZ;
+	}
+
+	return std::abs(maxZ-minZ);
+}
+
+
+float mesh::Mesh::getMinHeight() const{
+	float minY = INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curY = mVertices[i]->mCoords->y();
+		if( curY < minY) minY = curY;
+	}
+
+	return minY;
+}
+
+float mesh::Mesh::getMaxHeight() const{
+	float maxY = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curY = mVertices[i]->mCoords->y();
+		if( curY > maxY) maxY = curY;
+	}
+
+	return maxY;
+}
+
+float mesh::Mesh::getMinWidth() const{
+	float minX = INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curX = mVertices[i]->mCoords->x();
+		if( curX < minX) minX = curX;
+	}
+
+	return minX;
+}
+
+float mesh::Mesh::getMaxWidth() const{
+	float maxX = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curX = mVertices[i]->mCoords->x();
+		if( curX > maxX) maxX = curX;
+	}
+
+	return maxX;
+}
+
+float mesh::Mesh::getMinDepth() const{
+	float minZ = INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curZ = mVertices[i]->mCoords->z();
+		if( curZ < minZ) minZ = curZ;
+	}
+
+	return minZ;
+}
+
+float mesh::Mesh::getMaxDepth() const{
+	float maxZ = -INFINITY;
+
+	for(int i=0; i<mNbVertices; i++){
+		float curZ = mVertices[i]->mCoords->z();
+		if( curZ > maxZ) maxZ = curZ;
+	}
+
+	return maxZ;
+}
 
 
 // void mesh::Mesh::triToPureQuadMarkingPhase(){

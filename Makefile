@@ -19,7 +19,7 @@ DOCCONF := Doxyfile
 DOCGEN := doxygen
 
 # Create the list of directories
-DIRS = mesh main opengl opengl/glfw opengl/glad opengl/shaders utils maths maths/glm scene scene/object
+DIRS = mesh main opengl opengl/glfw opengl/glad opengl/shaders opengl/ressourceManager utils maths maths/glm scene scene/object
 SOURCEDIRS = $(foreach dir, $(DIRS), $(addprefix $(SOURCEDIR)/, $(dir)))
 TARGETDIRS = $(foreach dir, $(DIRS), $(addprefix $(BUILDDIR)/, $(dir)))
 
