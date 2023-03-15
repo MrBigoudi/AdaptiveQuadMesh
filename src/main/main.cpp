@@ -1,10 +1,6 @@
 #include <cstdlib>
 
-#include "mesh.hpp"
-#include "scene.hpp"
-#include "opengl.hpp"
-#include "utils.hpp"
-#include "maths.hpp"
+#include "main.hpp"
 
 // camera
 scene::Camera camera(maths::Vector3(0.0f, 0.0f, 1.0f));
@@ -12,7 +8,10 @@ scene::Camera camera(maths::Vector3(0.0f, 0.0f, 1.0f));
 const float ROTATION_ANGLE = 10.0f;
 float rotationAngle = 0.0f;
 scene::RotationAxe rotationAxe = scene::x;
+const float LINE_WIDTH = 0.5f;
 float lineWidth = 1.0f;
+
+const char* DEFAULT_OBJECT = "media/objects/chess_piece.obj";
 
 bool toQuad = false;
 
@@ -88,9 +87,6 @@ void processInput(GLFWwindow *window){
         rotationAxe = scene::y;
     }
 
-    // transform the object in a quad
-    if(glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) toQuad = true;
-
     // modify line width
     if(glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS) lineWidth += 0.1f;
     if(glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS) lineWidth -= 0.1f;
@@ -107,18 +103,30 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     // glfwSetScrollCallback(window, scroll_callback);
     // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
+    // IMGUI
+    [[maybe_unused]] ImGuiIO& io = initIMGUI(window);
+    bool show_another_window = true;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    // create a file browser instance
+    ImGui::FileBrowser fileDialog;
+    
+    // (optional) set browser properties
+    fileDialog.SetTitle("Select Mesh (*.obj)");
+    fileDialog.SetTypeFilters({ ".obj" });
+
+
     opengl::ResourceManager::loadShader("src/shaders/vert.glsl", "src/shaders/frag.glsl", "objectShader");
 
-    // scene::Object object = scene::Object("media/objects/armadillo.obj");
-    // scene::Object object = scene::Object("media/objects/chess_piece.obj");
-    // scene::Object object = scene::Object("media/objects/venus.obj");
-    scene::Object object = scene::Object("media/objects/garg.obj");
+    // scene::Object* object = new scene::Object("media/objects/armadillo.obj");
+    // scene::Object* object = new scene::Object("media/objects/chess_piece.obj");
+    // scene::Object* object = new scene::Object("media/objects/venus.obj");
+    // scene::Object* object = new scene::Object("media/objects/garg.obj");
+    scene::Object* object = new scene::Object(DEFAULT_OBJECT);
 
-    object.initCamera(&camera);
+    object->initCamera(&camera);
 
     glEnable(GL_DEPTH_TEST);
 
-    glClearColor(0.21f, 0.3f, 0.3f, 1.0f);
 
     // MVP
     glm::mat4 projection = camera.getProjectionMatrix();
@@ -130,34 +138,95 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
         processInput(window);
         glfwPollEvents();
 
-        if(toQuad){
-            object.toQuadMesh();
-            // object.mMesh->printStats();
-            object.initCamera(&camera);
-            toQuad = false;
-        }
-
+        // glClearColor(0.21f, 0.3f, 0.3f, 1.0f);
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
+
+        // ##################################### OBJECT ###########################################
         // MVP
         projection = camera.getProjectionMatrix();
         view = camera.getViewMatrix();
         model = glm::mat4(1.0f);
 
-        object.update(deltaTime, rotationAngle, rotationAxe, glm::vec3(1.0f));
-        object.draw("objectShader", model, view, projection, lineWidth);
+        if(toQuad){
+            object->toQuadMesh();
+            // object.mMesh->printStats();
+            object->initCamera(&camera);
+            toQuad = false;
+        }
+
+        object->update(deltaTime, rotationAngle, rotationAxe, glm::vec3(1.0f));
+        object->draw("objectShader", model, view, projection, lineWidth);
+
+        // ##################################### OBJECT DONE ###########################################
+
+
+
+        // ##################################### IMGUI ###########################################
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        if (show_another_window){
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+            // open file dialog when user clicks this button
+            if(ImGui::Button("Load a Mesh"))
+                fileDialog.Open();
+            if(ImGui::Button("Triangular To Quad"))
+                object->toQuadMesh();
+            ImGui::Text("\n\nZoom In: Press W\nZoom Out: Press S\n\n");
+            ImGui::Text("Rotate on X axis: Press DOWN / UP\nRotate on Y axis: Press D / A\nRotate on Z axis: Press LEFT / RIGHT\n\n");
+            if(ImGui::Button("Wider Lines"))
+                lineWidth += LINE_WIDTH;
+            if(ImGui::Button("Smaller Lines"))
+                lineWidth -= LINE_WIDTH;
+            if(ImGui::Button("Reset")){
+                delete object;
+                object = new scene::Object(DEFAULT_OBJECT);
+                object->initCamera(&camera);
+            }
+            ImGui::End();
+        }
+        // file dialog
+        fileDialog.Display();
+        if(fileDialog.HasSelected()){
+            // std::cout << "Selected filename" << fileDialog.GetSelected().string() << std::endl;
+            delete object;
+            object = new scene::Object(fileDialog.GetSelected().string());
+            object->initCamera(&camera);
+            fileDialog.ClearSelected();
+        }
+
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // ##################################### IMGUI DONE ###########################################
+
 
         // unbind vao
         glBindVertexArray(0);
-
         glfwSwapBuffers(window);
     }
 
+    cleanIMGUI();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
+
+    delete object;
 
     exit(EXIT_SUCCESS);
 }

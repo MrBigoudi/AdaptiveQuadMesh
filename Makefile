@@ -19,7 +19,11 @@ DOCCONF := Doxyfile
 DOCGEN := doxygen
 
 # Create the list of directories
-DIRS = mesh main opengl opengl/glfw opengl/glad opengl/shaders opengl/ressourceManager utils maths maths/glm scene scene/object
+DIRS = main mesh utils 
+DIRS += maths maths/glm
+DIRS += opengl opengl/glfw opengl/glad opengl/shaders opengl/ressourceManager
+DIRS += scene scene/object scene/camera scene/imgui scene/imgui/backends scene/imgui/imgui_filebrowser
+
 SOURCEDIRS = $(foreach dir, $(DIRS), $(addprefix $(SOURCEDIR)/, $(dir)))
 TARGETDIRS = $(foreach dir, $(DIRS), $(addprefix $(BUILDDIR)/, $(dir)))
 
@@ -32,6 +36,7 @@ VPATH = $(SOURCEDIRS)
 # Create a list of *.cpp sources in DIRS
 SOURCES = $(foreach dir,$(SOURCEDIRS),$(wildcard $(dir)/*.cpp))
 HEADERS = $(foreach dir,$(SOURCEDIRS),$(wildcard $(dir)/*.hpp))
+HEADERS += $(foreach dir,$(SOURCEDIRS),$(wildcard $(dir)/*.hpp))
 
 # Define objects for all sources
 OBJS := $(subst $(SOURCEDIR),$(BUILDDIR),$(SOURCES:.cpp=.o))
@@ -72,6 +77,8 @@ TARGET := main.app
 
 VERBOSE = TRUE
 
+CXXVERISON += -std=c++17
+
 # Hide or not the calls depending of VERBOSE
 ifeq ($(VERBOSE),TRUE)
     HIDE =  
@@ -82,7 +89,7 @@ endif
 # Define the function that will generate each rule
 define generateRules
 $(1)/%.o: %.cpp
-	$(HIDE)$(CXX) $(CXXFLAGS) -c $$(INCLUDES) -o $$(subst /,$$(PSEP),$$@) $$(subst /,$$(PSEP),$$<) -MMD
+	$(HIDE)$(CXX) $(CXXFLAGS) $(CXXVERISON) -c $$(INCLUDES) -o $$(subst /,$$(PSEP),$$@) $$(subst /,$$(PSEP),$$<) -MMD
 endef
 
 .PHONY: all clean dirs doc main test
