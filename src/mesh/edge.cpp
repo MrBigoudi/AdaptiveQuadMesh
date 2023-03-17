@@ -121,3 +121,35 @@ bool mesh::Edge::hasDoubles(std::vector<mesh::Edge*> edges){
     }
     return false;
 }
+
+void mesh::Edge::mergeEdge(mesh::Edge* e2){
+    // update old faces' edges
+    if(e2->mFaceRight->mEdge->mId == e2->mId)
+        e2->mFaceRight->mEdge = e2->mEdgeRightCW;
+    if(e2->mFaceRight->mEdge->mId == e2->mReverseEdge->mId)
+        e2->mFaceRight->mEdge = e2->mReverseEdge->mEdgeRightCW;
+
+    // update old vertices' edges
+    if(mVertexDestination->mEdge->mId == e2->mId)
+        mVertexDestination->mEdge = e2->mEdgeRightCW;
+    if(mVertexOrigin->mEdge->mId == e2->mId)
+        mVertexOrigin->mEdge = e2->mEdgeRightCCW;
+    if(mVertexDestination->mEdge->mId == e2->mReverseEdge->mId)
+        mVertexDestination->mEdge = e2->mReverseEdge->mEdgeRightCW;
+    if(mVertexOrigin->mEdge->mId == e2->mReverseEdge->mId)
+        mVertexOrigin->mEdge = e2->mReverseEdge->mEdgeRightCCW;
+
+    // update self
+    mEdgeRightCW = e2->mEdgeRightCW;
+    mEdgeRightCCW = e2->mEdgeRightCCW;
+
+    e2->mEdgeRightCW->mEdgeRightCCW = this;
+    e2->mEdgeRightCCW->mEdgeRightCW = this;
+    e2->mEdgeLeftCW->mEdgeLeftCCW = this;
+    e2->mEdgeLeftCCW->mEdgeLeftCW = this;
+
+    e2->mReverseEdge->mEdgeLeftCW->mEdgeLeftCCW = this->mReverseEdge;
+    e2->mReverseEdge->mEdgeLeftCCW->mEdgeLeftCW = this->mReverseEdge;
+    e2->mReverseEdge->mEdgeRightCW->mEdgeRightCCW = this->mReverseEdge;
+    e2->mReverseEdge->mEdgeRightCCW->mEdgeRightCW = this->mReverseEdge;
+}

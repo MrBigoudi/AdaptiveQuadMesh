@@ -231,3 +231,43 @@ std::vector<mesh::Vertex*> mesh::Face::getUnconnectedVertices(mesh::Face* f2) co
 
     return unconnected; 
 }
+
+void mesh::Face::createDiagonal(){
+    std::vector<mesh::Vertex*> surVertices = getSurroundingVertices();
+    assert(surVertices.size() == 4); // only on quads
+
+    float minDiag = INFINITY;
+    mesh::Vertex* v1;
+    mesh::Vertex* v2;
+
+    for(int i=0; i<2; i++){
+        float curDist = maths::Vector3::distance(surVertices[i]->mCoords, surVertices[i+2]->mCoords);
+        if(curDist < minDiag){
+            v1 = surVertices[i];
+            v2 = surVertices[i+2];
+            minDiag = curDist;
+        }
+    }
+
+    mesh::Diagonal* diag = new mesh::Diagonal();
+    diag->face = (mesh::Face*)this;
+    diag->v1 = v1;
+    diag->v2 = v2;
+    diag->length = minDiag;
+
+    mDiagonal = diag;
+}
+
+mesh::Diagonal* mesh::Face::cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2){
+    if(d1->length < d2->length) return d1;
+    return d2;
+}
+
+
+std::vector<mesh::Diagonal*> mesh::Face::getMinHeap(std::vector<mesh::Face*> faces){
+    // get all the diagonals
+    std::vector<mesh::Diagonal*> diags;
+    for(int i=0; i<int(faces.size()); i++) diags.push_back(faces[i]->mDiagonal);
+    std::make_heap(diags.begin(), diags.end(), mesh::Face::cmpDiagonal);
+    return diags;
+}

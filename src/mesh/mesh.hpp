@@ -50,6 +50,11 @@ class Mesh{
         */
         std::vector<mesh::Edge*> mEdges;
 
+        /**
+         * A heap of diagonals
+        */
+        std::vector<mesh::Diagonal*> mDiagHeap;
+
     public:
 
         /**
@@ -232,6 +237,12 @@ class Mesh{
         */
         void removeEdgeFromList(mesh::Edge* edge);
 
+        /**
+         * Remove a vertex from the list
+         * @param vertex The vertex to remove
+        */
+        void removeVertexFromList(mesh::Vertex* vertex);
+
         // /**
         //  * Get the list of triangle faces from the mesh
         //  * @return The triangles as a list
@@ -378,6 +389,18 @@ class Mesh{
         //  * @param triangle The triangle to remove
         // */
         // void triToQuadRemoveOldTriangle(mesh::Face* triangle);
+
+    public:
+        /**
+         * Init the faces' diagonals and the heap
+        */
+        void initDiagonals();
+
+        /**
+         * Collapse diagonal
+         * @param diag The diagonal to collapse
+        */
+        void diagonalCollapse(mesh::Diagonal* diag);
 
 };
 

@@ -3,12 +3,40 @@
 #include "edge.hpp"
 #include "vertex.hpp"
 #include <vector>
+#include <algorithm>
 
 namespace mesh{
 
 class Vertex;
 
 class Edge;
+
+class Face;
+
+/**
+ * A structure to represent a diagonal
+*/
+struct Diagonal{
+    /**
+     * The diagonal face
+    */
+    mesh::Face* face;
+
+    /**
+     * The first vertex of the diagonal
+    */
+    mesh::Vertex* v1;
+
+    /**
+     * The second vertex of the diagonal
+    */
+    mesh::Vertex* v2;
+
+    /**
+     * The length of the diagonal
+    */
+    float length;
+};
 
 /**
  * The face class from the mesh
@@ -46,6 +74,11 @@ class Face{
          * Flag to know it the face is a triangle
         */
         bool mIsTriangle = true;
+
+        /**
+         * The face shortest diagonal
+        */
+        mesh::Diagonal* mDiagonal;
 
     private:
         /**
@@ -137,6 +170,26 @@ class Face{
          * @return The list of vertices
         */
         std::vector<mesh::Vertex*> getUnconnectedVertices(mesh::Face* f2) const;
+
+        /**
+         * Set the diagonal as the shortest diagonal of a face
+        */
+        void createDiagonal();
+
+        /**
+         * Get a min heap according to the diagonal size from a list of faces
+         * @param faces The list of faces
+         * @return The diagonal min heap
+        */
+        static std::vector<mesh::Diagonal*> getMinHeap(std::vector<mesh::Face*> faces);
+
+        /**
+         * Compare two diagonals
+         * @param d1 The first diagonal
+         * @param d2 The second diagonal
+         * @return The diagonal with the shortest length
+        */
+        static mesh::Diagonal* cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2);
 
 };
 

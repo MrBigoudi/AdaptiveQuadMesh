@@ -7,6 +7,7 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <chrono>
 
 #include "edge.hpp"
 #include "face.hpp"
@@ -117,14 +118,14 @@ std::vector<std::string> mesh::Mesh::toString() const{
 }
 
 void mesh::Mesh::printStats() const{
-	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+	fprintf(stdout, "Mesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
 }
 
 
 void mesh::Mesh::print() const{
 	std::vector<std::string> strings = toString();
 
-	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+	fprintf(stdout, "Mesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
 
 	fprintf(stdout, "\n\nVertices:\n");
 	for (int i=0; i<mNbVertices; i++){
@@ -408,6 +409,17 @@ void mesh::Mesh::removeFaceFromList(mesh::Face* face){
 	}
 }
 
+void mesh::Mesh::removeVertexFromList(mesh::Vertex* vertex){
+	for(int i = 0; i<int(mVertices.size()); i++){
+		if(mVertices[i]->mId == vertex->mId){
+			mVertices.erase(mVertices.begin()+i);
+			mNbVertices--;
+			delete(vertex);
+			return;
+		}
+	}
+}
+
 void mesh::Mesh::removeEdgeFromList(mesh::Edge* edge){
 	for(int i = 0; i<int(mEdges.size()); i++){
 		if(mEdges[i]->mId == edge->mId){
@@ -444,7 +456,7 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 		if(rightFace->mEdge->mId == edge->mId)
 			rightFace->mEdge = edge->mEdgeRightCW;
 
-		// fusioning faces
+		// merge faces
 		mesh::Face* newFace = rightFace->mergeFace(leftFace);
 		// edge->print();
 
@@ -496,13 +508,21 @@ void mesh::Mesh::removeMarkedEdges(){
 
 void mesh::Mesh::triToQuad(){
 	// print();
+	// auto start = std::chrono::high_resolution_clock::now();
 	triToQuadRemovalMarkingPhase();
-	printStats();
+	// auto stop = std::chrono::high_resolution_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	// printf("time marking phase: %f\n", double(duration.count()));
+	// printStats();
 	// printf("\nEdgesToDelete: %d", int(getAllEdgesToDelete().size()));
 	// checkCorrectness();
 	// print();
+	// start = std::chrono::high_resolution_clock::now();
 	removeMarkedEdges();
-	printStats();
+	// stop = std::chrono::high_resolution_clock::now();
+	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	// printf("time remove marked phase: %f\n", double(duration.count()));
+	// printStats();
 	// checkCorrectness();
 	// print();
 	assert(getAllEdgesToDelete().size() == 0);
@@ -510,8 +530,12 @@ void mesh::Mesh::triToQuad(){
 	// subdivide all remaining triangles
 	assert(howManyTriangles() % 2 == 0);
 
+	// start = std::chrono::high_resolution_clock::now();
 	triToPureQuad();
-	printStats();
+	// stop = std::chrono::high_resolution_clock::now();
+	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	// printf("time tri to pure quad phase: %f\n", double(duration.count()));
+	// printStats();
 	assert(howManyTriangles() == 0);
 
 	// print();
@@ -755,12 +779,20 @@ void mesh::Mesh::triToPureQuad(){
 			build a new edge
 		remove the edge between the two triangles
 	*/
+	// auto start = std::chrono::high_resolution_clock::now();
 	mesh::Face* curTriangle = getTriangle();
+	// auto stop = std::chrono::high_resolution_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	// printf("time get triangle: %f\n", double(duration.count()));
 	while(curTriangle != nullptr){
 		// printf("\nwhile curTriangle\n");
 		// checkCorrectness();
 		// get a list of faces between it and another triangle using BFS
+		// start = std::chrono::high_resolution_clock::now();
 		std::vector<mesh::Face*> path = pathToClosestTriangle(curTriangle);
+		// stop = std::chrono::high_resolution_clock::now();
+		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+		// printf("time path to closest triangle: %f\n", double(duration.count()));
 
 		mesh::Face* curTri = nullptr;
 		mesh::Face* curQuad = nullptr;
@@ -771,6 +803,7 @@ void mesh::Mesh::triToPureQuad(){
 		// print();
 		// printf("\n###################### NEW PATH #######################\n");
 		while(path.size() != 0){
+			// start = std::chrono::high_resolution_clock::now();
 			// get current triangle and current quad neighbour
 			curTri = path.back();
 			assert(curTri != nullptr);
@@ -844,15 +877,27 @@ void mesh::Mesh::triToPureQuad(){
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
+			// stop = std::chrono::high_resolution_clock::now();
+			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+			// printf("time select edges: %f\n", double(duration.count()));
+			// start = std::chrono::high_resolution_clock::now();
 			removeEdge(edgeToRemove);
 			removeEdge(revEdgeToRemove);
+			// stop = std::chrono::high_resolution_clock::now();
+			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+			// printf("time remove edges: %f\n", double(duration.count()));
+
 
 			// get the newly created face
 			mesh::Face* newPoly = mFaces.back(); // the last added 
 			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
 			// printf("\nNewPoly:\n");
 			// newPoly->print();
+			// start = std::chrono::high_resolution_clock::now();
 			createEdge(newPoly, v1, v2);
+			// stop = std::chrono::high_resolution_clock::now();
+			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+			// printf("time create edge: %f\n", double(duration.count()));
 
 			mesh::Face* newTriangle = mFaces.back(); // the last added
 			if(newTriangle->isQuad()) newTriangle = mFaces[mNbFaces-2];
@@ -879,7 +924,11 @@ void mesh::Mesh::triToPureQuad(){
 		}
 
 		// get a new triangle
+		// start = std::chrono::high_resolution_clock::now();
 		curTriangle = getTriangle();
+		// stop = std::chrono::high_resolution_clock::now();
+		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+		// printf("time get triangle 2: %f\n", double(duration.count()));
 	}
 }
 
@@ -1259,4 +1308,61 @@ float mesh::Mesh::getMaxDepth() const{
 // 	}
 
 // }
+
+void mesh::Mesh::initDiagonals(){
+	for(int i=0; i<mNbFaces; i++){
+		mFaces[i]->createDiagonal();
+		assert(mFaces[i]->mDiagonal);
+	}
+	mDiagHeap = mesh::Face::getMinHeap(mFaces);
+	int nbDiags = int(mDiagHeap.size());
+
+	assert( nbDiags == mNbFaces);
+
+	// for(int i=0; i<nbDiags; i++) mDiagHeap[i]->face->print();
+}
+
+void mesh::Mesh::diagonalCollapse(mesh::Diagonal* diag){
+	std::vector<mesh::Edge*> surEdge = diag->face->getSurroundingEdges();
+	for(int i=0; i<int(surEdge.size()); i++) surEdge[i]->print();
+
+	// update old vertex coordinate
+	diag->v1->mCoords = new maths::Vector3((*(diag->v1->mCoords) + *(diag->v2->mCoords)) / 2.0f);
+	printf("\nv1:\n");
+	diag->v1->print();
+	printf("v2:\n");
+	diag->v2->print();
+
+	// get edge that goes into the vertex we'll keep
+	mesh::Edge* edgeToKeep = diag->face->mEdge;
+	while(edgeToKeep->mVertexDestination->mId != diag->v1->mId) edgeToKeep = edgeToKeep->mEdgeRightCW;
+	printf("to keep:\n");
+	edgeToKeep->print();
+	printf("to keep CCW:\n");
+	edgeToKeep->mEdgeRightCCW->print();
+	printf("to keep CCW CCW:\n");
+	edgeToKeep->mEdgeRightCCW->mEdgeRightCCW->print();
+	printf("\n");
+
+	// update the vertex origin and destination
+	edgeToKeep->mEdgeRightCCW->mEdgeLeftCW->mVertexDestination = diag->v1;
+	edgeToKeep->mEdgeRightCCW->mEdgeLeftCW->mReverseEdge->mVertexOrigin = diag->v1;
+
+	// merge the edges
+	mesh::Edge* edgeToRemove1 = edgeToKeep->mEdgeRightCCW->mReverseEdge;
+	mesh::Edge* edgeToRemove2 = edgeToKeep->mEdgeRightCCW->mEdgeRightCCW->mReverseEdge;
+	edgeToKeep->mergeEdge(edgeToRemove1);
+	edgeToKeep->mEdgeRightCW->mergeEdge(edgeToRemove2);
+
+	for(int i=0; i<int(surEdge.size()); i++) surEdge[i]->print();
+
+	// remove the face, the vertex and the two useless edges
+	removeFaceFromList(diag->face);
+	removeVertexFromList(diag->v2);
+	removeEdgeFromList(edgeToRemove1->mReverseEdge);
+	removeEdgeFromList(edgeToRemove2->mReverseEdge);
+	removeEdgeFromList(edgeToRemove1);
+	removeEdgeFromList(edgeToRemove1);
+
+}
 

@@ -198,6 +198,12 @@ class Edge{
         */
         static bool cmp(const mesh::Edge &e1, const mesh::Edge &e2);
 
+        /**
+         * Merge two edges
+         * @param e2 The second edge
+        */
+        void mergeEdge(mesh::Edge* e2);
+
     private:
         /**
          * Get a list of all the vertices from edges surrounding a face

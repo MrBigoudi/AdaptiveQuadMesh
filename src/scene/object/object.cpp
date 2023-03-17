@@ -47,7 +47,7 @@ void scene::Object::toQuadMesh(){
     if(mIsQuad) return;
     printf("\n\n###################### Begin Triangular Mesh to Quad Mesh transformation ######################\n\n");
     mMesh->triToQuad();
-    toObj("bin/objects/tmp.obj");
+    // toObj("bin/objects/tmp.obj");
     mTrans = glm::mat4(1.0f);
     initVerticesAndIndices();
     initDim();
