@@ -508,27 +508,15 @@ void mesh::Mesh::removeMarkedEdges(){
 
 void mesh::Mesh::triToQuad(){
 	// print();
-	auto start = std::chrono::high_resolution_clock::now();
 	triToQuadRemovalMarkingPhase();
-	auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	printf("time marking phase: %f\n", double(duration.count()));
 	// printStats();
-	start = std::chrono::high_resolution_clock::now();
 	removeMarkedEdges();
 	clean();
-	stop = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	printf("time remove marked phase: %f\n", double(duration.count()));
 	// printStats();
 
 	// subdivide all remaining triangles
-	start = std::chrono::high_resolution_clock::now();
 	triToPureQuad();
 	clean();
-	stop = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	printf("time tri to pure quad phase: %f\n", double(duration.count()));
 	// printStats();
 	assert(howManyTriangles() == 0);
 
@@ -680,9 +668,8 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 }
 
 std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle) const {
-	const int VISITED = 2;
-	const int ONGOING = 1;
-	const int UNVISITED = 0;
+	const int VISITED = 1;
+	const int ONGOING = 0;
 
 	// the path between the two triangles
 	std::vector<mesh::Face*> path;
@@ -691,12 +678,6 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 	std::map<int, int> status;
 	// initiate a dictionary containing the face's id as keys and the parent in the search as value
 	std::map<int, mesh::Face*> parents;
-	// assert(mNbFaces == int(mFaces.size()));
-	for(int i=0; i<mNbFaces; i++){
-		status[mFaces[i]->mId] = UNVISITED;
-		parents[mFaces[i]->mId] = nullptr;
-	}
-	parents[triangle->mId] = nullptr;
 	status[triangle->mId] = ONGOING;
 
 	// initiate the queue for the BFS search
@@ -726,7 +707,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			// neighbours[i]->print();
 
 			// check if we've found a triangle different from the origin triangle
-			if(neighbours[i]->isTriangle() && status[curNeighbourFaceId] == UNVISITED){
+			if(neighbours[i]->isTriangle() && status.find(curNeighbourFaceId) == status.end()){
 				quit = true;
 				// save the face and update it's parent
 				closestTriangleId = curNeighbourFaceId;
@@ -736,7 +717,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			}
 
 			// if current face not visited yet update its status and add it to the queue
-			if(status[curNeighbourFaceId] == UNVISITED){
+			if(status.find(curNeighbourFaceId) == status.end()){
 				status[curNeighbourFaceId] = ONGOING;
 				// update parent
 				parents[curNeighbourFaceId] = curFace;
@@ -776,20 +757,12 @@ void mesh::Mesh::triToPureQuad(){
 			build a new edge
 		remove the edge between the two triangles
 	*/
-	// auto start = std::chrono::high_resolution_clock::now();
 	mesh::Face* curTriangle = getTriangle();
-	// auto stop = std::chrono::high_resolution_clock::now();
-	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	// printf("time get triangle: %f\n", double(duration.count()));
 	while(curTriangle != nullptr){
 		// printf("\nwhile curTriangle\n");
 		// checkCorrectness();
 		// get a list of faces between it and another triangle using BFS
-		// start = std::chrono::high_resolution_clock::now();
 		std::vector<mesh::Face*> path = pathToClosestTriangle(curTriangle);
-		// stop = std::chrono::high_resolution_clock::now();
-		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-		// printf("time path to closest triangle: %f\n", double(duration.count()));
 
 		mesh::Face* curTri = nullptr;
 		mesh::Face* curQuad = nullptr;
@@ -884,11 +857,7 @@ void mesh::Mesh::triToPureQuad(){
 			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
 			// printf("\nNewPoly:\n");
 			// newPoly->print();
-			// start = std::chrono::high_resolution_clock::now();
 			createEdge(newPoly, v1, v2);
-			// stop = std::chrono::high_resolution_clock::now();
-			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-			// printf("time create edge: %f\n", double(duration.count()));
 
 			mesh::Face* newTriangle = mFaces.back(); // the last added
 			if(newTriangle->isQuad()) newTriangle = mFaces[mNbFaces-2];
@@ -915,11 +884,7 @@ void mesh::Mesh::triToPureQuad(){
 		}
 
 		// get a new triangle
-		// start = std::chrono::high_resolution_clock::now();
 		curTriangle = getTriangle();
-		// stop = std::chrono::high_resolution_clock::now();
-		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-		// printf("time get triangle 2: %f\n", double(duration.count()));
 	}
 }
 
