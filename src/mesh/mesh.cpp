@@ -352,8 +352,8 @@ void mesh::Mesh::triToQuadRemovalMarkingPhase(){
 	std::vector<mesh::Edge*> candidateEdges;
 	for (int i=0; i<int(mFaces.size()); i++){
 		mesh::Edge* edgeToRemove = nullptr;
-		float maxSquared = -1.0f;
-		float maxLength = -1.0f;
+		float minSquared = INFINITY;
+		float maxLength = -INFINITY;
 
 		// for all edges surrounding the face
 		std::vector<mesh::Edge*> surEdges = mFaces[i]->getSurroundingEdges();
@@ -361,25 +361,25 @@ void mesh::Mesh::triToQuadRemovalMarkingPhase(){
 		for (int j=0; j<int(surEdges.size()); j++){
 			mesh::Edge* curEdge = surEdges[j];
 			// get the sum of pairwised dot product
-			std::vector<mesh::Edge*> newQuadEdges = {
-				curEdge->mEdgeLeftCW,
-				curEdge->mEdgeLeftCCW->mReverseEdge,
-				curEdge->mEdgeRightCCW,
-				curEdge->mEdgeRightCW->mReverseEdge
+			std::vector<mesh::Vertex*> newQuadVertices = {
+				curEdge->mEdgeLeftCW->mVertexOrigin,
+				curEdge->mVertexDestination,
+				curEdge->mEdgeRightCW->mVertexDestination,
+				curEdge->mVertexOrigin
 			};
-			float sumDotProd = mesh::Edge::getSumPairwiseDotProd(newQuadEdges);
+			float sumDotProd = mesh::Edge::getSumPairwiseDotProd(newQuadVertices);
 			float length = curEdge->getLength();
 			// update max sum
-			if(sumDotProd >= maxSquared){
-				if(sumDotProd > maxSquared || length >= maxLength){
-					maxSquared = sumDotProd;
+			if(sumDotProd <= minSquared){
+				if(sumDotProd < minSquared || length > maxLength){
+					minSquared = sumDotProd;
 					maxLength = length;
 					edgeToRemove = curEdge;
 				}
 			}
 		}
 
-		edgeToRemove->mSumDotProd = maxSquared;
+		edgeToRemove->mSumDotProd = minSquared;
 		candidateEdges.push_back(edgeToRemove);
 	}
 
@@ -457,21 +457,16 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 			rightFace->mEdge = edge->mEdgeRightCW;
 
 		// merge faces
-		mesh::Face* newFace = rightFace->mergeFace(leftFace);
+		rightFace->mergeFace(leftFace);
 		// edge->print();
 
 		// deleting the faces from the list
 		removeFaceFromList(leftFace);
 		// edge->print();
-		removeFaceFromList(rightFace);
-		// edge->print();
-
-		// adding the new face to the list
-		mFaces.push_back(newFace);
-		mNbFaces++;
 	}
 
 	// fixing edges
+	// edge->print();
 	edge->updateAllNeighbours();
 	removeEdgeFromList(edge);
 }
@@ -531,12 +526,12 @@ void mesh::Mesh::triToQuad(){
 	assert(howManyTriangles() % 2 == 0);
 
 	// start = std::chrono::high_resolution_clock::now();
-	triToPureQuad();
+	// triToPureQuad();
 	// stop = std::chrono::high_resolution_clock::now();
 	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 	// printf("time tri to pure quad phase: %f\n", double(duration.count()));
 	// printStats();
-	assert(howManyTriangles() == 0);
+	// assert(howManyTriangles() == 0);
 
 	// print();
 }
@@ -872,24 +867,18 @@ void mesh::Mesh::triToPureQuad(){
 			// printf("v2:\n");
 			// v2->print();
 
+			// get the newly created quad
+			mesh::Face* newPoly = curTri; // the current triangle
+			
 			// remove the edges
 			// printf("\nEdge to remove:\n");
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
-			// stop = std::chrono::high_resolution_clock::now();
-			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-			// printf("time select edges: %f\n", double(duration.count()));
-			// start = std::chrono::high_resolution_clock::now();
 			removeEdge(edgeToRemove);
 			removeEdge(revEdgeToRemove);
-			// stop = std::chrono::high_resolution_clock::now();
-			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-			// printf("time remove edges: %f\n", double(duration.count()));
 
 
-			// get the newly created face
-			mesh::Face* newPoly = mFaces.back(); // the last added 
 			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
 			// printf("\nNewPoly:\n");
 			// newPoly->print();

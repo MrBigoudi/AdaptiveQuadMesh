@@ -136,10 +136,10 @@ class Edge{
 
         /**
          * Get the sum of pairwise dot products of edges surrounding a face
-         * @param face A list of chained edges surrounding a face 
+         * @param vertexList A list of vertices surrounding a face 
          * @return The sum of the dot products
         */
-        static float getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);
+        static float getSumPairwiseDotProd(std::vector<mesh::Vertex*> vertexList);
 
         /**
          * Get the perimeter of edges surrounding a face

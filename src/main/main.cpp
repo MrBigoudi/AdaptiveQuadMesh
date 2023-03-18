@@ -237,8 +237,10 @@
 void testObject(std::string path){
     printf("\n%s:\n", path.c_str());
     mesh::Mesh fromObj = mesh::Mesh::loadOBJ(path);
+    fromObj.checkCorrectness();
     fromObj.printStats();
     fromObj.triToQuad();
+    fromObj.checkCorrectness();
     fromObj.printStats();
 }
 
@@ -252,13 +254,16 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     // testObject("media/objects/bunny.obj");
     // testObject("media/objects/armadillo.obj");
     // fromObj.checkCorrectness();
-    mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
+    // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
+    // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/garg.obj");
+    mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
     // std::printf("nbVertices:%d, nbFaces:%d\n", fromObj.mNbVertices, fromObj.mNbFaces);
     // fromObj.print();
     // fromObj.printStats();
     fromObj.triToQuad();
-    fromObj.initDiagonals();
-    fromObj.diagonalCollapse(fromObj.mDiagHeap.back());
+    fromObj.checkCorrectness();
+    // fromObj.initDiagonals();
+    // fromObj.diagonalCollapse(fromObj.mDiagHeap.back());
     // fromObj.printStats();
     // fromObj.print();
     fromObj.toObj("bin/objects/tmp.obj");

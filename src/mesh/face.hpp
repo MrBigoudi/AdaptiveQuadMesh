@@ -115,11 +115,10 @@ class Face{
         std::vector<mesh::Face*> getSurroundingFaces() const;
 
         /**
-         * Merge two faces
+         * Merge two faces into the current one
          * @param face The face we'll merge
-         * @return The newly created face
         */
-        mesh::Face* mergeFace(mesh::Face* face);
+        void mergeFace(mesh::Face* face);
 
         /**
          * Cast a face into a printable string

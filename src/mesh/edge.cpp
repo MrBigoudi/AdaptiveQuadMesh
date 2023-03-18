@@ -9,12 +9,14 @@ bool mesh::Edge::isRemovable(){
     return (!this->mFaceLeft->mToMerge) && (!this->mFaceRight->mToMerge); 
 }
 
-float mesh::Edge::getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList){
-    std::vector<mesh::Vertex*> vertexList = mesh::Edge::getVertFromSurrEdges(edgeList);
+float mesh::Edge::getSumPairwiseDotProd(std::vector<mesh::Vertex*> vertexList){
     float sum = 0;
+    int len = int(vertexList.size());
 
-    for(int i=0; i<int(vertexList.size()-1); i++){
-        sum += maths::Vector3::dot(vertexList[i]->mCoords, vertexList[i+1]->mCoords);
+    for(int i=0; i<len; i++){
+        maths::Vector3 v1 = (vertexList[(i+1)%len]->mCoords - vertexList[i]->mCoords);
+        maths::Vector3 v2 = (vertexList[(i+2)%len]->mCoords - vertexList[(i+1)%len]->mCoords);
+        sum += std::abs(maths::Vector3::dot(v1.normalize(), v2.normalize()));
     }
 
     return sum;

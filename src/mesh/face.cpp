@@ -75,22 +75,8 @@ std::vector<mesh::Face*> mesh::Face::getSurroundingFaces() const{
 }
 
 
-mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
-    mesh::Face* newFace = new Face();
-    newFace->mEdge = mEdge;
-
+void mesh::Face::mergeFace(mesh::Face* face){
     std::vector<mesh::Edge*> surEdgeFace;
-    
-    // updating edges surrounding current face
-    surEdgeFace = getSurroundingEdges();
-    // printf("sur edges f1:\n");
-    // print();
-    for(int i=0; i<int(surEdgeFace.size()); i++){
-        // surEdgeFace[i]->print();
-        if (surEdgeFace[i]->mFaceLeft->mId == mId) surEdgeFace[i]->mFaceLeft = newFace;
-        if (surEdgeFace[i]->mFaceRight->mId == mId) surEdgeFace[i]->mFaceRight = newFace;
-    }
-    // printf("sur edges f1 done\n");
 
     // updating edges surrounding the second face
     surEdgeFace = face->getSurroundingEdges();
@@ -98,13 +84,11 @@ mesh::Face* mesh::Face::mergeFace(mesh::Face* face){
     // face->print();
     for(int i=0; i<int(surEdgeFace.size()); i++){
         // surEdgeFace[i]->print();
-        if (surEdgeFace[i]->mFaceLeft->mId == face->mId) surEdgeFace[i]->mFaceLeft = newFace;
-        if (surEdgeFace[i]->mFaceRight->mId == face->mId) surEdgeFace[i]->mFaceRight = newFace;
+        if (surEdgeFace[i]->mFaceLeft->mId == face->mId) surEdgeFace[i]->mFaceLeft = this;
+        if (surEdgeFace[i]->mFaceRight->mId == face->mId) surEdgeFace[i]->mFaceRight = this;
     }
     // printf("sur edges f1 done\n");
-    newFace->mIsTriangle = false;
-
-    return newFace;
+    mIsTriangle = false;
 }
 
 std::string mesh::Face::toString() const{
