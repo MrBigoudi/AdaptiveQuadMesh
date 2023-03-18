@@ -36,6 +36,7 @@ struct Diagonal{
      * The length of the diagonal
     */
     float length;
+
 };
 
 /**

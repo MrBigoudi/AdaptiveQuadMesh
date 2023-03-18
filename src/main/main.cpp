@@ -256,7 +256,11 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     // fromObj.checkCorrectness();
     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/garg.obj");
+    auto start = std::chrono::high_resolution_clock::now();
     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+	printf("time loading phase: %f\n", double(duration.count()));
     // std::printf("nbVertices:%d, nbFaces:%d\n", fromObj.mNbVertices, fromObj.mNbFaces);
     // fromObj.print();
     // fromObj.printStats();

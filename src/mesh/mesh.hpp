@@ -55,6 +55,11 @@ class Mesh{
         */
         std::vector<mesh::Diagonal*> mDiagHeap;
 
+        /**
+         * The index of the first triangle
+        */
+        int mFirstTriIdx = 0;
+
     public:
 
         /**
@@ -226,10 +231,21 @@ class Mesh{
         void removeEdge(mesh::Edge* edge);
 
         /**
+         * Remove an edge (without removing it from the list but flagging it)
+         * @param edge The edge to be removed from the mesh
+        */
+        void removeEdgeV2(mesh::Edge* edge);
+
+        /**
          * Remove a face from the list
          * @param face The face to remove
         */
         void removeFaceFromList(mesh::Face* face);
+
+        /**
+         * Remove flagged faces from the list
+        */
+        void removeFacesFromList();
 
         /**
          * Remove an edge from the list
@@ -238,10 +254,25 @@ class Mesh{
         void removeEdgeFromList(mesh::Edge* edge);
 
         /**
+         * Remove flagged edges from the list
+        */
+        void removeEdgesFromList();
+
+        /**
          * Remove a vertex from the list
          * @param vertex The vertex to remove
         */
         void removeVertexFromList(mesh::Vertex* vertex);
+
+        /**
+         * Remove flagged vertices from the list
+        */
+        void removeVerticesFromList();
+
+        /**
+         * Clean the mesh
+        */
+        void clean();
 
         // /**
         //  * Get the list of triangle faces from the mesh
@@ -253,7 +284,7 @@ class Mesh{
          * Get one of the remaining triangles in the mesh
          * @return The face of the triangle (nullptr if there are no triangles left)
         */
-        mesh::Face* getTriangle() const;
+        mesh::Face* getTriangle();
 
         /**
          * Count the number of triangles in the mesh
