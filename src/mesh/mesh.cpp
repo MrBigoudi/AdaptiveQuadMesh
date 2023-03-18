@@ -214,8 +214,10 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 	// create mesh::Edge and save to edge
     std::vector<mesh::Edge*> edgeList;
 	int nbEdges = int(faces.size()*3);
-	for (int i = 0; i < nbEdges; i++)
-		edgeList.push_back(new mesh::Edge());
+	for (int i = 0; i < nbEdges; i++){
+		mesh::Edge* newEdge = new mesh::Edge();
+		edgeList.push_back(newEdge);
+	}
 
 	// create mesh::Face and save to face
     std::vector<mesh::Face*> faceList;
@@ -495,50 +497,38 @@ void mesh::Mesh::removeMarkedEdges(){
 	while(edgeList.size() != 0){
 		mesh::Edge* edgeTmp = edgeList.back();
 		edgeList.pop_back();
-		removeEdge(edgeTmp);
+		removeEdgeV2(edgeTmp);
 	}
+
+	// remove marked edges from the list
+	// removeEdgesFromList();
 	// print();
 }
 
 
 void mesh::Mesh::triToQuad(){
 	// print();
-	// auto start = std::chrono::high_resolution_clock::now();
 	triToQuadRemovalMarkingPhase();
-	// auto stop = std::chrono::high_resolution_clock::now();
-	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	// printf("time marking phase: %f\n", double(duration.count()));
 	// printStats();
-	// printf("\nEdgesToDelete: %d", int(getAllEdgesToDelete().size()));
-	// checkCorrectness();
-	// print();
-	// start = std::chrono::high_resolution_clock::now();
 	removeMarkedEdges();
-	// stop = std::chrono::high_resolution_clock::now();
-	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	// printf("time remove marked phase: %f\n", double(duration.count()));
+	clean();
 	// printStats();
-	// checkCorrectness();
-	// print();
-	assert(getAllEdgesToDelete().size() == 0);
 
 	// subdivide all remaining triangles
-	assert(howManyTriangles() % 2 == 0);
-
-	// start = std::chrono::high_resolution_clock::now();
-	// triToPureQuad();
-	// stop = std::chrono::high_resolution_clock::now();
-	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	// printf("time tri to pure quad phase: %f\n", double(duration.count()));
+	triToPureQuad();
+	clean();
 	// printStats();
-	// assert(howManyTriangles() == 0);
+	assert(howManyTriangles() == 0);
 
 	// print();
 }
 
-mesh::Face* mesh::Mesh::getTriangle() const {
-	for(int i=0; i<mNbFaces; i++){
-		if(mFaces[i]->isTriangle()) return mFaces[i];
+mesh::Face* mesh::Mesh::getTriangle() {
+	for(int i=mFirstTriIdx; i<mNbFaces; i++){
+		if(mFaces[i]->isTriangle()){
+			mFirstTriIdx = i;
+			return mFaces[i];
+		}
 	}
 	return nullptr;
 }
@@ -647,7 +637,7 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 	assert(edgeRev->mEdgeLeftCW);
 
 	// remove old face from list
-	removeFaceFromList(face);
+	face->mToDelete = true;
 
 	// add new elements to list
 	mFaces.push_back(halfFace1);
@@ -678,9 +668,8 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 }
 
 std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle) const {
-	const int VISITED = 2;
-	const int ONGOING = 1;
-	const int UNVISITED = 0;
+	const int VISITED = 1;
+	const int ONGOING = 0;
 
 	// the path between the two triangles
 	std::vector<mesh::Face*> path;
@@ -689,12 +678,6 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 	std::map<int, int> status;
 	// initiate a dictionary containing the face's id as keys and the parent in the search as value
 	std::map<int, mesh::Face*> parents;
-	// assert(mNbFaces == int(mFaces.size()));
-	for(int i=0; i<mNbFaces; i++){
-		status[mFaces[i]->mId] = UNVISITED;
-		parents[mFaces[i]->mId] = nullptr;
-	}
-	parents[triangle->mId] = nullptr;
 	status[triangle->mId] = ONGOING;
 
 	// initiate the queue for the BFS search
@@ -724,7 +707,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			// neighbours[i]->print();
 
 			// check if we've found a triangle different from the origin triangle
-			if(neighbours[i]->isTriangle() && status[curNeighbourFaceId] == UNVISITED){
+			if(neighbours[i]->isTriangle() && status.find(curNeighbourFaceId) == status.end()){
 				quit = true;
 				// save the face and update it's parent
 				closestTriangleId = curNeighbourFaceId;
@@ -734,7 +717,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			}
 
 			// if current face not visited yet update its status and add it to the queue
-			if(status[curNeighbourFaceId] == UNVISITED){
+			if(status.find(curNeighbourFaceId) == status.end()){
 				status[curNeighbourFaceId] = ONGOING;
 				// update parent
 				parents[curNeighbourFaceId] = curFace;
@@ -774,20 +757,12 @@ void mesh::Mesh::triToPureQuad(){
 			build a new edge
 		remove the edge between the two triangles
 	*/
-	// auto start = std::chrono::high_resolution_clock::now();
 	mesh::Face* curTriangle = getTriangle();
-	// auto stop = std::chrono::high_resolution_clock::now();
-	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-	// printf("time get triangle: %f\n", double(duration.count()));
 	while(curTriangle != nullptr){
 		// printf("\nwhile curTriangle\n");
 		// checkCorrectness();
 		// get a list of faces between it and another triangle using BFS
-		// start = std::chrono::high_resolution_clock::now();
 		std::vector<mesh::Face*> path = pathToClosestTriangle(curTriangle);
-		// stop = std::chrono::high_resolution_clock::now();
-		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-		// printf("time path to closest triangle: %f\n", double(duration.count()));
 
 		mesh::Face* curTri = nullptr;
 		mesh::Face* curQuad = nullptr;
@@ -875,18 +850,14 @@ void mesh::Mesh::triToPureQuad(){
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
-			removeEdge(edgeToRemove);
-			removeEdge(revEdgeToRemove);
+			removeEdgeV2(edgeToRemove);
+			removeEdgeV2(revEdgeToRemove);
 
 
 			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
 			// printf("\nNewPoly:\n");
 			// newPoly->print();
-			// start = std::chrono::high_resolution_clock::now();
 			createEdge(newPoly, v1, v2);
-			// stop = std::chrono::high_resolution_clock::now();
-			// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-			// printf("time create edge: %f\n", double(duration.count()));
 
 			mesh::Face* newTriangle = mFaces.back(); // the last added
 			if(newTriangle->isQuad()) newTriangle = mFaces[mNbFaces-2];
@@ -907,17 +878,13 @@ void mesh::Mesh::triToPureQuad(){
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
-			removeEdge(edgeToRemove);
-			removeEdge(revEdgeToRemove);
+			removeEdgeV2(edgeToRemove);
+			removeEdgeV2(revEdgeToRemove);
 			// printf("\ndone removing\n");
 		}
 
 		// get a new triangle
-		// start = std::chrono::high_resolution_clock::now();
 		curTriangle = getTriangle();
-		// stop = std::chrono::high_resolution_clock::now();
-		// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-		// printf("time get triangle 2: %f\n", double(duration.count()));
 	}
 }
 
@@ -1346,12 +1313,101 @@ void mesh::Mesh::diagonalCollapse(mesh::Diagonal* diag){
 	for(int i=0; i<int(surEdge.size()); i++) surEdge[i]->print();
 
 	// remove the face, the vertex and the two useless edges
-	removeFaceFromList(diag->face);
-	removeVertexFromList(diag->v2);
-	removeEdgeFromList(edgeToRemove1->mReverseEdge);
-	removeEdgeFromList(edgeToRemove2->mReverseEdge);
-	removeEdgeFromList(edgeToRemove1);
-	removeEdgeFromList(edgeToRemove1);
+	diag->face->mToDelete = true;
+	diag->v2->mToDelete = true;
+	edgeToRemove1->mReverseEdge->mToDelete = true;
+	edgeToRemove2->mReverseEdge->mToDelete = true;
+	edgeToRemove1->mToDelete = true;
+	edgeToRemove1->mToDelete = true;
 
 }
 
+
+void mesh::Mesh::removeEdgeV2(mesh::Edge* edge){
+	// TODO reorient edges
+	// print();
+	// printf("\n");
+	// edge->print();
+	// fixing vertices
+	if(edge->mVertexOrigin->mEdge->mId == edge->mId)
+		edge->mVertexOrigin->mEdge = edge->mEdgeRightCCW;
+	if(edge->mVertexDestination->mEdge->mId == edge->mId)
+		edge->mVertexDestination->mEdge = edge->mEdgeRightCW;
+
+	// check if reversed edge has already been taken care of
+	if(edge->mFaceLeft != edge->mFaceRight){
+		// fixing faces
+		mesh::Face* leftFace = edge->mFaceLeft;
+		mesh::Face* rightFace = edge->mFaceRight;
+		// leftFace->print();
+		// rightFace->print();
+		// update faces' edges to update the new face
+		if(leftFace->mEdge->mId == edge->mId)
+			leftFace->mEdge = edge->mEdgeLeftCW->mReverseEdge;
+		if(rightFace->mEdge->mId == edge->mId)
+			rightFace->mEdge = edge->mEdgeRightCW;
+
+		// merge faces
+		rightFace->mergeFace(leftFace);
+		// edge->print();
+
+		// deleting the faces from the list
+		leftFace->mToDelete = true;
+		leftFace->mIsTriangle = false; // to avoid problems
+		// edge->print();
+	}
+
+	// fixing edges
+	// edge->print();
+	edge->updateAllNeighbours();
+
+	// flag the edge
+	edge->mToDelete = true;
+	
+	// removeEdgeFromList(edge);
+}
+
+void mesh::Mesh::removeEdgesFromList(){
+	int i=0;
+	while(i<mNbEdges){
+		mesh::Edge* curEdge = mEdges[i];
+		if(curEdge->mToDelete){
+			mEdges.erase(mEdges.begin()+i);
+			mNbEdges--;
+			continue;
+		}
+		i++;
+	}
+}
+
+void mesh::Mesh::removeFacesFromList(){
+	int i=0;
+	while(i<mNbFaces){
+		mesh::Face* curFace = mFaces[i];
+		if(curFace->mToDelete){
+			mFaces.erase(mFaces.begin()+i);
+			mNbFaces--;
+			continue;
+		}
+		i++;
+	}
+}
+
+void mesh::Mesh::removeVerticesFromList(){
+	int i=0;
+	while(i<mNbVertices){
+		mesh::Vertex* curVertex = mVertices[i];
+		if(curVertex->mToDelete){
+			mVertices.erase(mVertices.begin()+i);
+			mNbVertices--;
+			continue;
+		}
+		i++;
+	}
+}
+
+void mesh::Mesh::clean(){
+	removeEdgesFromList();
+	removeFacesFromList();
+	removeVerticesFromList();
+}
