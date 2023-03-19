@@ -145,6 +145,11 @@ void mesh::Mesh::print() const{
 }
 
 mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
+	// init index counters
+	mesh::Vertex::ID_CPT = 0;
+	mesh::Face::ID_CPT = 0;
+	mesh::Edge::ID_CPT = 0;
+
 	std::vector<maths::Vector3*> vertices;
 	std::vector<std::vector<int>> faces;
 	

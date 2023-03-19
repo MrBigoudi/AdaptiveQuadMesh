@@ -18,7 +18,7 @@ enum EdgePos {LCW, LCCW, RCW, RCCW, NONE};
 */
 class Edge{
 
-    private:
+    public:
         /**
          * The id counter
         */

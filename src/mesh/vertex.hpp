@@ -14,7 +14,7 @@ class Face;
 */
 class Vertex{
 
-    private:
+    public:
         /**
          * The id counter
         */

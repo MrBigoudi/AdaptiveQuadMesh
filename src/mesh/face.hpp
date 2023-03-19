@@ -53,7 +53,7 @@ struct Diagonal{
 */
 class Face{
 
-    private:
+    public:
         /**
          * The id counter
         */
