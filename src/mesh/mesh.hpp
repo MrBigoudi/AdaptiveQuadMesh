@@ -269,11 +269,6 @@ class Mesh{
         */
         void removeVerticesFromList();
 
-        /**
-         * Clean the mesh
-        */
-        void clean();
-
         // /**
         //  * Get the list of triangle faces from the mesh
         //  * @return The triangles as a list
@@ -429,9 +424,19 @@ class Mesh{
 
         /**
          * Collapse diagonal
-         * @param diag The diagonal to collapse
         */
-        void diagonalCollapse(mesh::Diagonal* diag);
+        void diagonalCollapse();
+
+        /**
+         * Clean the mesh
+        */
+        void clean();
+
+        /**
+         * Update the diagonal heap
+         * @param facesToUpdate The list of faces to update
+        */
+        void updateDiagonals(std::vector<mesh::Face*> facesToUpdate);
 
 };
 

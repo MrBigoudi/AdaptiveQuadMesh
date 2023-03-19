@@ -33,10 +33,19 @@ struct Diagonal{
     mesh::Vertex* v2;
 
     /**
+     * The first vertex of the diagonal (for the second diagonal)
+    */
+    mesh::Vertex* v1Prime;
+
+    /**
+     * The first second of the diagonal (for the second diagonal)
+    */
+    mesh::Vertex* v2Prime;
+
+    /**
      * The length of the diagonal
     */
     float length;
-
 };
 
 /**

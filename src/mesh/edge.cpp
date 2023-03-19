@@ -125,33 +125,87 @@ bool mesh::Edge::hasDoubles(std::vector<mesh::Edge*> edges){
 }
 
 void mesh::Edge::mergeEdge(mesh::Edge* e2){
+    assert(e2 && e2->mReverseEdge);
+    mesh::EdgePos pos = getEdgePos(e2);
+    assert(pos != mesh::NONE);
+    mesh::Edge* edgeToMerge = e2->mReverseEdge;
+
+    // update old edges' vertices
+    mesh::Vertex* vertToRemove;
+    mesh::Vertex* vertToKeep;
+    if(pos == mesh::RCCW || pos == mesh::LCW){
+       vertToRemove = edgeToMerge->mVertexDestination;
+       vertToKeep = mVertexDestination;
+    } else {
+       vertToRemove = edgeToMerge->mVertexOrigin;
+       vertToKeep = mVertexOrigin;
+    }
+
+    std::vector<mesh::Edge*> surEdges = vertToRemove->getSurroundingEdges();
+    // printf("Vert to remove:\n"); vertToRemove->print();
+    for(int i=0; i<int(surEdges.size()); i++){
+        // printf("Cur edge:\n"); surEdges[i]->print();
+        if(surEdges[i]->mVertexOrigin->mId == vertToRemove->mId) surEdges[i]->mVertexOrigin = vertToKeep;
+        else if(surEdges[i]->mVertexDestination->mId == vertToRemove->mId) surEdges[i]->mVertexDestination = vertToKeep;
+        else assert(false);
+    }
+    // printf("Done curEdges\n");
+
     // update old faces' edges
-    if(e2->mFaceRight->mEdge->mId == e2->mId)
-        e2->mFaceRight->mEdge = e2->mEdgeRightCW;
-    if(e2->mFaceRight->mEdge->mId == e2->mReverseEdge->mId)
-        e2->mFaceRight->mEdge = e2->mReverseEdge->mEdgeRightCW;
+    if(edgeToMerge->mFaceRight->mEdge->mId == edgeToMerge->mId)
+        edgeToMerge->mFaceRight->mEdge = this;
+    if(edgeToMerge->mFaceRight->mEdge->mId == edgeToMerge->mReverseEdge->mId)
+        edgeToMerge->mFaceRight->mEdge = mReverseEdge;
 
     // update old vertices' edges
-    if(mVertexDestination->mEdge->mId == e2->mId)
-        mVertexDestination->mEdge = e2->mEdgeRightCW;
-    if(mVertexOrigin->mEdge->mId == e2->mId)
-        mVertexOrigin->mEdge = e2->mEdgeRightCCW;
-    if(mVertexDestination->mEdge->mId == e2->mReverseEdge->mId)
-        mVertexDestination->mEdge = e2->mReverseEdge->mEdgeRightCW;
-    if(mVertexOrigin->mEdge->mId == e2->mReverseEdge->mId)
-        mVertexOrigin->mEdge = e2->mReverseEdge->mEdgeRightCCW;
+    if(edgeToMerge->mVertexDestination->mEdge->mId == edgeToMerge->mId)
+        edgeToMerge->mVertexDestination->mEdge = this;
+    if(edgeToMerge->mVertexOrigin->mEdge->mId == edgeToMerge->mId)
+        edgeToMerge->mVertexOrigin->mEdge = this;
+    if(edgeToMerge->mVertexDestination->mEdge->mId == edgeToMerge->mReverseEdge->mId)
+        edgeToMerge->mVertexDestination->mEdge = mReverseEdge;
+    if(edgeToMerge->mVertexOrigin->mEdge->mId == edgeToMerge->mReverseEdge->mId)
+        edgeToMerge->mVertexOrigin->mEdge = mReverseEdge;
 
-    // update self
-    mEdgeRightCW = e2->mEdgeRightCW;
-    mEdgeRightCCW = e2->mEdgeRightCCW;
+    // update if self is right side
+    if(pos == mesh::RCW || pos == mesh::RCCW){
+        // update self
+        mEdgeRightCCW = edgeToMerge->mEdgeRightCCW;
+        mEdgeRightCW = edgeToMerge->mEdgeRightCW;
+        mFaceRight = edgeToMerge->mFaceRight;
+        mReverseEdge->mEdgeLeftCCW = e2->mEdgeLeftCCW;
+        mReverseEdge->mEdgeLeftCW = e2->mEdgeLeftCW;
+        mReverseEdge->mFaceLeft = e2->mFaceLeft;
 
-    e2->mEdgeRightCW->mEdgeRightCCW = this;
-    e2->mEdgeRightCCW->mEdgeRightCW = this;
-    e2->mEdgeLeftCW->mEdgeLeftCCW = this;
-    e2->mEdgeLeftCCW->mEdgeLeftCW = this;
+        // update RCCW
+        edgeToMerge->mEdgeRightCCW->mEdgeRightCW = this;
+        e2->mEdgeLeftCCW->mEdgeLeftCW = mReverseEdge;
 
-    e2->mReverseEdge->mEdgeLeftCW->mEdgeLeftCCW = this->mReverseEdge;
-    e2->mReverseEdge->mEdgeLeftCCW->mEdgeLeftCW = this->mReverseEdge;
-    e2->mReverseEdge->mEdgeRightCW->mEdgeRightCCW = this->mReverseEdge;
-    e2->mReverseEdge->mEdgeRightCCW->mEdgeRightCW = this->mReverseEdge;
+        // update RCW
+        edgeToMerge->mEdgeRightCW->mEdgeRightCCW = this;
+        e2->mEdgeLeftCW->mEdgeLeftCCW = mReverseEdge;
+    }
+
+    // update if self is left side
+    if(pos == mesh::LCW || pos == mesh::LCCW){
+        // update self
+        // update LCW
+        mEdgeLeftCW = edgeToMerge->mEdgeLeftCW;
+        mReverseEdge->mEdgeRightCW = edgeToMerge->mEdgeLeftCW->mReverseEdge;
+        // update LCCW
+        mEdgeLeftCCW = edgeToMerge->mEdgeLeftCCW;
+        mReverseEdge->mEdgeRightCCW = edgeToMerge->mEdgeLeftCCW->mReverseEdge;
+        // update faces
+        mFaceLeft = edgeToMerge->mFaceLeft;
+        mReverseEdge->mFaceRight = edgeToMerge->mFaceRight;
+     
+        // update edgeToMerge neighbours
+        // update edgeToMerge->LCW
+        edgeToMerge->mEdgeLeftCW->mEdgeLeftCCW = this;
+        edgeToMerge->mEdgeLeftCW->mReverseEdge->mEdgeRightCCW = mReverseEdge;
+        // update edgeToMerge->LCCW
+        edgeToMerge->mEdgeLeftCCW->mEdgeLeftCW = this;
+        edgeToMerge->mEdgeLeftCCW->mReverseEdge->mEdgeRightCW = mReverseEdge;
+    }
+
 }

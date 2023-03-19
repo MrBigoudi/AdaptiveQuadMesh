@@ -60,10 +60,9 @@ class Object{
         bool mIsQuad = false;
 
         /**
-         * Init a camera's position
-         * @param camera The camera to update
+         * Tells if the diagonal heap has been initialized
         */
-        void initCamera(scene::Camera* camera) const;
+        bool mDiagInit = false;
 
 
     public:
@@ -145,6 +144,17 @@ class Object{
          * @param linesWidth The lines' width
         */
         void draw(std::string shaderName, glm::mat4 model, glm::mat4 view, glm::mat4 proj, float linesWidth) const;
+        
+        /**
+         * Init a camera's position
+         * @param camera The camera to update
+        */
+        void initCamera(scene::Camera* camera) const;
+
+        /**
+         * Do a diagonal collapse
+        */
+        void diagonalCollapse();
 
     private:
         /**

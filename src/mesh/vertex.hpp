@@ -125,6 +125,18 @@ class Vertex{
          * @return The vertex as a glm vector
         */
         glm::vec3 toGlm() const;
+
+        /**
+         * Get the faces arround a vertex
+         * @return The list of faces arround the vertex
+        */
+        std::vector<mesh::Face*> getSurroundingFaces() const;
+
+        /**
+         * Get the edges arround a vertex
+         * @return The list of edges arround the vertex
+        */
+        std::vector<mesh::Edge*> getSurroundingEdges() const;
 };
 
 }

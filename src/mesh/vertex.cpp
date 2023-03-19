@@ -111,9 +111,12 @@ std::string mesh::Vertex::listToString(std::vector<mesh::Vertex*> list){
 
 bool mesh::Vertex::twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices){
 	std::vector<std::vector<int>> table(nbVertices, std::vector<int>(nbVertices, -1));
+    // printf("\nBefore nbVertices: %d\n", nbVertices);
     for(int i=0; i<int(edges.size()); i++){
         int v0 = edges[i]->mVertexOrigin->mId;
         int v1 = edges[i]->mVertexDestination->mId;
+        // edges[i]->print();
+        // printf("nbVertices: %d\n", nbVertices);
         if(table[v0][v1] != -1) return true;
         table[v0][v1] = edges[i]->mId;
     }
@@ -122,4 +125,54 @@ bool mesh::Vertex::twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices){
 
 glm::vec3 mesh::Vertex::toGlm() const{
     return mCoords->toGlm();
+}
+
+std::vector<mesh::Face*> mesh::Vertex::getSurroundingFaces() const{
+    std::vector<mesh::Face*> faces;
+
+    mesh::Edge* e0;
+    mesh::Edge* curEdge;
+    
+    if (mEdge->mVertexOrigin->mId == mId){
+        e0 = mEdge;
+        curEdge = mEdge;
+    } else {
+        e0 = mEdge->mReverseEdge;
+        curEdge = mEdge->mReverseEdge;
+    }
+    
+    do{
+        // curEdge->print();
+        curEdge = curEdge->mEdgeRightCCW->mReverseEdge;
+        assert(curEdge);
+        assert(curEdge->mFaceRight);
+        faces.push_back(curEdge->mFaceRight);
+    } while(curEdge->mId != e0->mId);
+    
+    return faces;
+}
+
+std::vector<mesh::Edge*> mesh::Vertex::getSurroundingEdges() const{
+    std::vector<mesh::Edge*> edges;
+
+    mesh::Edge* e0;
+    mesh::Edge* curEdge;
+    
+    if (mEdge->mVertexOrigin->mId == mId){
+        e0 = mEdge;
+        curEdge = mEdge;
+    } else {
+        e0 = mEdge->mReverseEdge;
+        curEdge = mEdge->mReverseEdge;
+    }
+
+    do{
+        curEdge = curEdge->mEdgeRightCCW->mReverseEdge;
+        assert(curEdge);
+        assert(curEdge->mReverseEdge);
+        edges.push_back(curEdge);
+        edges.push_back(curEdge->mReverseEdge);
+    } while(curEdge->mId != e0->mId);
+    
+    return edges;
 }

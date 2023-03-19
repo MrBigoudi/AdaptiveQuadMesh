@@ -45,7 +45,7 @@ scene::Object::~Object(){
 
 void scene::Object::toQuadMesh(){
     if(mIsQuad) return;
-    printf("\n\n###################### Begin Triangular Mesh to Quad Mesh transformation ######################\n\n");
+    // printf("\n\n###################### Begin Triangular Mesh to Quad Mesh transformation ######################\n\n");
     mMesh->triToQuad();
     // toObj("bin/objects/tmp.obj");
     mTrans = glm::mat4(1.0f);
@@ -53,7 +53,7 @@ void scene::Object::toQuadMesh(){
     initDim();
     initVao();
     mIsQuad = true;
-    printf("\n\n###################### Done Triangular Mesh to Quad Mesh transformation ###################\n\n");
+    // printf("\n\n###################### Done Triangular Mesh to Quad Mesh transformation ###################\n\n");
 }
 
 
@@ -222,4 +222,17 @@ void scene::Object::initCamera(scene::Camera* camera) const {
                                         2.0f*mDepth);
     camera->mZmax = 500.0f;
     // printf("camera: %s\n", camera->mPosition.toString().c_str());
+}
+
+void scene::Object::diagonalCollapse(){
+    if(!mDiagInit) {
+        mMesh->initDiagonals();
+        mDiagInit = true;
+    }
+    mMesh->diagonalCollapse();
+    mMesh->clean();
+
+    initVerticesAndIndices();
+    initDim();
+    initVao();
 }

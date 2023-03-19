@@ -89,6 +89,7 @@ void mesh::Face::mergeFace(mesh::Face* face){
     }
     // printf("sur edges f1 done\n");
     mIsTriangle = false;
+    mToMerge = false;
 }
 
 std::string mesh::Face::toString() const{
@@ -221,25 +222,40 @@ void mesh::Face::createDiagonal(){
     assert(surVertices.size() == 4); // only on quads
 
     float minDiag = INFINITY;
-    mesh::Vertex* v1;
-    mesh::Vertex* v2;
+    mesh::Vertex* v1 = nullptr;
+    mesh::Vertex* v2 = nullptr;
+    mesh::Vertex* v1Prime = nullptr;
+    mesh::Vertex* v2Prime = nullptr;
 
     for(int i=0; i<2; i++){
         float curDist = maths::Vector3::distance(surVertices[i]->mCoords, surVertices[i+2]->mCoords);
+        mesh::Vertex* tmpV1 = surVertices[i];
+        mesh::Vertex* tmpV2 = surVertices[i+2];
+
+        // check if edge collapsable
+        // if(tmpV1->getSurroundingFaces().size() != 4 || tmpV2->getSurroundingFaces().size() != 4) continue;
+
         if(curDist < minDiag){
-            v1 = surVertices[i];
-            v2 = surVertices[i+2];
+            v1 = tmpV1;
+            v2 = tmpV2;
             minDiag = curDist;
+        } else {
+            v1Prime = tmpV1;
+            v2Prime = tmpV2;
         }
     }
 
-    mesh::Diagonal* diag = new mesh::Diagonal();
-    diag->face = (mesh::Face*)this;
-    diag->v1 = v1;
-    diag->v2 = v2;
-    diag->length = minDiag;
+    if(v1 && v2){
+        mesh::Diagonal* diag = new mesh::Diagonal();
+        diag->face = (mesh::Face*)this;
+        diag->v1 = v1;
+        diag->v2 = v2;
+        diag->v1Prime = v1Prime;
+        diag->v2Prime = v2Prime;
+        diag->length = minDiag;
 
-    mDiagonal = diag;
+        mDiagonal = diag;
+    } else mDiagonal = nullptr;
 }
 
 mesh::Diagonal* mesh::Face::cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2){
@@ -251,7 +267,9 @@ mesh::Diagonal* mesh::Face::cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2){
 std::vector<mesh::Diagonal*> mesh::Face::getMinHeap(std::vector<mesh::Face*> faces){
     // get all the diagonals
     std::vector<mesh::Diagonal*> diags;
-    for(int i=0; i<int(faces.size()); i++) diags.push_back(faces[i]->mDiagonal);
+    for(int i=0; i<int(faces.size()); i++) {
+        if(faces[i]->mDiagonal) diags.push_back(faces[i]->mDiagonal);
+    }
     std::make_heap(diags.begin(), diags.end(), mesh::Face::cmpDiagonal);
     return diags;
 }
