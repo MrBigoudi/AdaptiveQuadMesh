@@ -434,9 +434,29 @@ class Mesh{
 
         /**
          * Update the diagonal heap
-         * @param facesToUpdate The list of faces to update
         */
-        void updateDiagonals(std::vector<mesh::Face*> facesToUpdate);
+        void updateDiagonals();
+
+    private:
+        /**
+         * Remove a doublet
+         * @param e1 The first edge of the doublet
+         * @param e2 The second edge of the doublet
+        */
+        void removeDoublet(mesh::Edge* e1, mesh::Edge* e2);
+
+    public:
+        /**
+         * Remove doublets
+         * @param faces The list of faces that can possibly have doublets
+        */
+        void removeDoublets(std::vector<mesh::Face*> faces);
+
+        /**
+         * Remove a singlet
+         * @param face The face to remove
+        */
+        void removeSinglet(mesh::Face* face);
 
 };
 

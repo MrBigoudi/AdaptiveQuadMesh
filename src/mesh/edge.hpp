@@ -165,12 +165,12 @@ class Edge{
          * Cast an edge into a printable string
          * @return The edge as a string
         */
-        std::string toString();
+        std::string toString() const;
 
         /**
          * Print an edge
         */
-        void print();
+        void print() const;
 
         /**
          * Get the list of all reversed edges of a given list of edges
@@ -203,6 +203,12 @@ class Edge{
          * @param e2 The second edge
         */
         void mergeEdge(mesh::Edge* e2);
+
+        /**
+         * Check if the neighbours are correct
+         * @return True if the neighbours are correct
+        */
+        bool check() const;
 
     private:
         /**

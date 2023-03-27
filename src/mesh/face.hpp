@@ -33,16 +33,6 @@ struct Diagonal{
     mesh::Vertex* v2;
 
     /**
-     * The first vertex of the diagonal (for the second diagonal)
-    */
-    mesh::Vertex* v1Prime;
-
-    /**
-     * The first second of the diagonal (for the second diagonal)
-    */
-    mesh::Vertex* v2Prime;
-
-    /**
      * The length of the diagonal
     */
     float length;
@@ -90,14 +80,18 @@ class Face{
         */
         mesh::Diagonal* mDiagonal;
 
-    private:
+        /**
+         * If the face needs an update
+        */
+        bool mToUpdate = false;
+
+    public:
         /**
          * Get a list of all edges surrounding the face given the starting point
          * @param startingEdge The edge where to start the loop
         */
         std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge) const;
 
-    public:
         /**
          * A basic constructor
          * @param edge The edge we'll store
@@ -123,6 +117,12 @@ class Face{
          * @return The list of all faces arround the face
         */
         std::vector<mesh::Face*> getSurroundingFaces() const;
+
+        /**
+         * Get a list of all faces surrounding the current face (even if conected by only one vertex)
+         * @return The list of all faces arround the face
+        */
+        std::vector<mesh::Face*> getAllSurroundingFaces() const;
 
         /**
          * Merge two faces into the current one
@@ -174,6 +174,13 @@ class Face{
         int getNumberOfSharedEdges(mesh::Face* f2) const;
 
         /**
+         * Get the common edges between two faces
+         * @param f2 The second face
+         * @return The shared edges between the current face and the given one
+        */
+        std::vector<mesh::Edge*> getSharedEdges(mesh::Face* f2) const;
+
+        /**
          * Get the list of unconnected vertices between two faces
          * @param f2 The second face
          * @return The list of vertices
@@ -199,6 +206,24 @@ class Face{
          * @return The diagonal with the shortest length
         */
         static mesh::Diagonal* cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2);
+
+        /**
+         * Test if a face is a doublet
+         * @return The two edges to remove as a vector
+        */
+        std::vector<mesh::Edge*> isDoublet() const;
+
+        /**
+         * Test if a face is a singlet
+         * @return True if it is, false otherwise
+        */
+        bool isSinglet() const;
+
+        /**
+         * Mark a list of faces as to update
+         * @param faces The faces to mark
+        */
+        static void markToUpdate(std::vector<mesh::Face*> faces);
 
 };
 

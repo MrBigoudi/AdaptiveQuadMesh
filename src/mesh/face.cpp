@@ -44,12 +44,22 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges() const{
 
 std::vector<mesh::Vertex*> mesh::Face::getSurroundingVertices() const{
     std::vector<mesh::Vertex*> surVertices;
+
     std::vector<mesh::Edge*>surEdges = getSurroundingEdges(mEdge);
     // print();
     for(int i=0; i<int(surEdges.size()); i++){
+        bool canInsert = true;
+        // check if not already in vector
+        for(int j=0; j<int(surVertices.size()); j++){
+            if(surEdges[i]->mVertexOrigin->mId == surVertices[j]->mId){
+                canInsert = false;
+                break;
+            }
+        }
         // surEdges[i]->mVertexOrigin->print();
-        surVertices.push_back(surEdges[i]->mVertexOrigin);
+        if(canInsert) surVertices.push_back(surEdges[i]->mVertexOrigin);
     }
+
     return surVertices;
 }
 
@@ -75,6 +85,30 @@ std::vector<mesh::Face*> mesh::Face::getSurroundingFaces() const{
 }
 
 
+std::vector<mesh::Face*> mesh::Face::getAllSurroundingFaces() const{
+    std::vector<mesh::Vertex*> surVertices = getSurroundingVertices();
+    std::vector<mesh::Face*> surFaces;
+    // print();
+    for(int i=0; i<int(surVertices.size()); i++){
+        std::vector<mesh::Face*> surFacesTmp = surVertices[i]->getSurroundingFaces();
+        for(int j=0; j<int(surFacesTmp.size()); j++){
+            if(surFacesTmp[j]->mId != mId){
+                bool alreadyAdded = false;
+                for(int k=0; k<int(surFaces.size()); k++){
+                    if(surFaces[k]->mId == surFacesTmp[j]->mId){
+                        alreadyAdded = true;
+                        break;
+                    }
+                }
+                if(!alreadyAdded) surFaces.push_back(surFacesTmp[j]);
+            }
+        }
+    }
+    return surFaces;
+}
+
+
+
 void mesh::Face::mergeFace(mesh::Face* face){
     std::vector<mesh::Edge*> surEdgeFace;
 
@@ -90,6 +124,9 @@ void mesh::Face::mergeFace(mesh::Face* face){
     // printf("sur edges f1 done\n");
     mIsTriangle = false;
     mToMerge = false;
+
+    face->mToDelete = true;
+    face->mIsTriangle = false; // to avoid problems
 }
 
 std::string mesh::Face::toString() const{
@@ -141,19 +178,24 @@ mesh::Edge* mesh::Face::getEdgeBetween(mesh::Face* face) const{
     return nullptr;
 }
 
-int mesh::Face::getNumberOfSharedEdges(mesh::Face* f2) const {
+std::vector<mesh::Edge*> mesh::Face::getSharedEdges(mesh::Face* f2) const{
     std::vector<mesh::Edge*> sur1 = getSurroundingEdges();
     std::vector<mesh::Edge*> sur2 = f2->getSurroundingEdges();
 
-    int sum = 0;
+    std::vector<mesh::Edge*> sharedEdges;
 
     for(int i=0; i<int(sur1.size()); i++){
         for(int j=0; j<int(sur2.size()); j++){
-            if(sur1[i]->mId == sur2[j]->mId) sum++;
+            if(sur1[i]->mId == sur2[j]->mId) sharedEdges.push_back(sur1[i]);
         }
     }
 
-    return sum;
+    return sharedEdges;    
+}
+
+
+int mesh::Face::getNumberOfSharedEdges(mesh::Face* f2) const {
+    return getSharedEdges(f2).size();
 }
 
 std::vector<mesh::Vertex*> mesh::Face::getUnconnectedVertices(mesh::Face* f2) const{
@@ -218,19 +260,20 @@ std::vector<mesh::Vertex*> mesh::Face::getUnconnectedVertices(mesh::Face* f2) co
 }
 
 void mesh::Face::createDiagonal(){
+    assert(!mToDelete);
     std::vector<mesh::Vertex*> surVertices = getSurroundingVertices();
     assert(surVertices.size() == 4); // only on quads
 
     float minDiag = INFINITY;
     mesh::Vertex* v1 = nullptr;
     mesh::Vertex* v2 = nullptr;
-    mesh::Vertex* v1Prime = nullptr;
-    mesh::Vertex* v2Prime = nullptr;
 
     for(int i=0; i<2; i++){
         float curDist = maths::Vector3::distance(surVertices[i]->mCoords, surVertices[i+2]->mCoords);
         mesh::Vertex* tmpV1 = surVertices[i];
         mesh::Vertex* tmpV2 = surVertices[i+2];
+        assert(!tmpV1->mToDelete);
+        assert(!tmpV2->mToDelete);
 
         // check if edge collapsable
         // if(tmpV1->getSurroundingFaces().size() != 4 || tmpV2->getSurroundingFaces().size() != 4) continue;
@@ -239,19 +282,14 @@ void mesh::Face::createDiagonal(){
             v1 = tmpV1;
             v2 = tmpV2;
             minDiag = curDist;
-        } else {
-            v1Prime = tmpV1;
-            v2Prime = tmpV2;
         }
     }
 
     if(v1 && v2){
         mesh::Diagonal* diag = new mesh::Diagonal();
-        diag->face = (mesh::Face*)this;
+        diag->face = this;
         diag->v1 = v1;
         diag->v2 = v2;
-        diag->v1Prime = v1Prime;
-        diag->v2Prime = v2Prime;
         diag->length = minDiag;
 
         mDiagonal = diag;
@@ -268,8 +306,43 @@ std::vector<mesh::Diagonal*> mesh::Face::getMinHeap(std::vector<mesh::Face*> fac
     // get all the diagonals
     std::vector<mesh::Diagonal*> diags;
     for(int i=0; i<int(faces.size()); i++) {
-        if(faces[i]->mDiagonal) diags.push_back(faces[i]->mDiagonal);
+        if(faces[i]->mDiagonal && !faces[i]->mToDelete) diags.push_back(faces[i]->mDiagonal);
     }
     std::make_heap(diags.begin(), diags.end(), mesh::Face::cmpDiagonal);
     return diags;
+}
+
+std::vector<mesh::Edge*> mesh::Face::isDoublet() const{
+    std::vector<mesh::Edge*> res;
+
+    std::vector<mesh::Edge*> surEdges = getSurroundingEdges(mEdge);
+    for(int i=0; i<int(surEdges.size()); i++){
+        mesh::Edge* curEdge = surEdges[i];
+        if(!curEdge->check()){
+            if(!curEdge->mEdgeRightCW->check()){
+                // printf("cur edge:\n"); curEdge->print();
+                // printf("curRCW:\n"); curEdge->mEdgeRightCW->print();
+                res.push_back(curEdge);
+                res.push_back(curEdge->mEdgeRightCW);
+                return res;
+            } else {
+                // printf("curRCCW:\n"); curEdge->mEdgeRightCCW->print();
+                // printf("cur edge:\n"); curEdge->print();
+                assert(!curEdge->mEdgeRightCCW->check());
+                res.push_back(curEdge->mEdgeRightCCW);
+                res.push_back(curEdge);
+                return res;
+            }
+        }
+    }
+
+    return {};
+}
+
+bool mesh::Face::isSinglet() const{
+    return (getSurroundingVertices().size() == 3);
+}
+
+void mesh::Face::markToUpdate(std::vector<mesh::Face*> faces){
+    for(int i=0; i<int(faces.size()); i++) faces[i]->mToUpdate = true;
 }

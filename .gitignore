@@ -37,3 +37,4 @@ bin/
 produced*.obj
 media/objects/common*
 imgui.ini
+*.tmp

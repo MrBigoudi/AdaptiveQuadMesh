@@ -56,7 +56,7 @@ class Vertex{
          * Cast a vertex into a printable string
          * @return The vertex as a string
         */
-        std::string toString();
+        std::string toString() const ;
 
         /**
          * Cast a list of vertices into a printable string
@@ -67,7 +67,7 @@ class Vertex{
         /**
          * Print a vertex
         */
-        void print();
+        void print() const;
 
         /**
          * Get a common vertices between two faces
@@ -137,6 +137,13 @@ class Vertex{
          * @return The list of edges arround the vertex
         */
         std::vector<mesh::Edge*> getSurroundingEdges() const;
+
+        /**
+         * Update vertices of a given edge list
+         * @param v2 The vertex we want to remove
+         * @param edges The list of edges to update
+        */
+        void mergeVertices(mesh::Vertex* v2, std::vector<mesh::Edge*> edges);
 };
 
 }

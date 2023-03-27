@@ -54,10 +54,10 @@ mesh::EdgePos mesh::Edge::getEdgePos(mesh::Edge* edgeLookingFor){
     // printf("\nthis: %p, toCheck: %p\n", this, edgeLookingFor);
     // printf("lcw: %p, lccw: %p\n", mEdgeLeftCW, mEdgeLeftCCW);
     // printf("rcw: %p, rccw: %p\n\n", mEdgeRightCW, mEdgeRightCCW);
-    if(edgeLookingFor == mEdgeLeftCW)   return LCW;
-    if(edgeLookingFor == mEdgeLeftCCW)  return LCCW;
-    if(edgeLookingFor == mEdgeRightCW)  return RCW;
-    if(edgeLookingFor == mEdgeRightCCW) return RCCW;
+    if(edgeLookingFor->mId == mEdgeLeftCW->mId)   return LCW;
+    if(edgeLookingFor->mId == mEdgeLeftCCW->mId)  return LCCW;
+    if(edgeLookingFor->mId == mEdgeRightCW->mId)  return RCW;
+    if(edgeLookingFor->mId == mEdgeRightCCW->mId) return RCCW;
     return NONE;
 
     // std::fprintf(stderr, "Error, failed to look up for an edge!\n");
@@ -65,7 +65,7 @@ mesh::EdgePos mesh::Edge::getEdgePos(mesh::Edge* edgeLookingFor){
 }
 
 
-std::string mesh::Edge::toString(){
+std::string mesh::Edge::toString() const{
     char buffer[256];
     sprintf(buffer, "e%d -> lcw%d, lccw%d, rcw%d, rccw%d, vo%d, vd%d, fl%d, fr%d, rev%d, toDel = %d", 
             mId, mEdgeLeftCW->mId, mEdgeLeftCCW->mId, mEdgeRightCW->mId, mEdgeRightCCW->mId, 
@@ -73,7 +73,7 @@ std::string mesh::Edge::toString(){
     return buffer;
 }
 
-void mesh::Edge::print(){
+void mesh::Edge::print() const{
     fprintf(stdout, "%s\n", toString().c_str());
 }
 
@@ -125,50 +125,41 @@ bool mesh::Edge::hasDoubles(std::vector<mesh::Edge*> edges){
 }
 
 void mesh::Edge::mergeEdge(mesh::Edge* e2){
+    // printf("Merge edges:\n");
+    // print();
+    // e2->print();
+
     assert(e2 && e2->mReverseEdge);
     mesh::EdgePos pos = getEdgePos(e2);
+    // printf("pos:%d\n", pos);
     assert(pos != mesh::NONE);
     mesh::Edge* edgeToMerge = e2->mReverseEdge;
 
-    // update old edges' vertices
-    mesh::Vertex* vertToRemove;
-    mesh::Vertex* vertToKeep;
-    if(pos == mesh::RCCW || pos == mesh::LCW){
-       vertToRemove = edgeToMerge->mVertexDestination;
-       vertToKeep = mVertexDestination;
-    } else {
-       vertToRemove = edgeToMerge->mVertexOrigin;
-       vertToKeep = mVertexOrigin;
-    }
-
-    std::vector<mesh::Edge*> surEdges = vertToRemove->getSurroundingEdges();
-    // printf("Vert to remove:\n"); vertToRemove->print();
-    for(int i=0; i<int(surEdges.size()); i++){
-        // printf("Cur edge:\n"); surEdges[i]->print();
-        if(surEdges[i]->mVertexOrigin->mId == vertToRemove->mId) surEdges[i]->mVertexOrigin = vertToKeep;
-        else if(surEdges[i]->mVertexDestination->mId == vertToRemove->mId) surEdges[i]->mVertexDestination = vertToKeep;
-        else assert(false);
-    }
-    // printf("Done curEdges\n");
-
     // update old faces' edges
     if(edgeToMerge->mFaceRight->mEdge->mId == edgeToMerge->mId)
-        edgeToMerge->mFaceRight->mEdge = this;
-    if(edgeToMerge->mFaceRight->mEdge->mId == edgeToMerge->mReverseEdge->mId)
-        edgeToMerge->mFaceRight->mEdge = mReverseEdge;
+        edgeToMerge->mFaceRight->mEdge = edgeToMerge->mEdgeRightCW;
+    else if(edgeToMerge->mFaceRight->mEdge->mId == e2->mId)
+        assert(false);
+        // edgeToMerge->mFaceRight->mEdge = edgeToMerge->mEdgeRightCW;
 
     // update old vertices' edges
-    if(edgeToMerge->mVertexDestination->mEdge->mId == edgeToMerge->mId)
-        edgeToMerge->mVertexDestination->mEdge = this;
-    if(edgeToMerge->mVertexOrigin->mEdge->mId == edgeToMerge->mId)
-        edgeToMerge->mVertexOrigin->mEdge = this;
-    if(edgeToMerge->mVertexDestination->mEdge->mId == edgeToMerge->mReverseEdge->mId)
-        edgeToMerge->mVertexDestination->mEdge = mReverseEdge;
-    if(edgeToMerge->mVertexOrigin->mEdge->mId == edgeToMerge->mReverseEdge->mId)
-        edgeToMerge->mVertexOrigin->mEdge = mReverseEdge;
+    if(edgeToMerge->mVertexDestination->mEdge->mId == edgeToMerge->mId){
+        assert(false);
+        // edgeToMerge->mVertexDestination->mEdge = edgeToMerge->mEdgeRightCW;
+    } else if(edgeToMerge->mVertexDestination->mEdge->mId == e2->mId){
+        edgeToMerge->mVertexDestination->mEdge = edgeToMerge->mEdgeRightCW;
+    }
+
+    if(edgeToMerge->mVertexOrigin->mEdge->mId == edgeToMerge->mId){
+        edgeToMerge->mVertexOrigin->mEdge = e2->mEdgeLeftCCW;
+    } else if(edgeToMerge->mVertexOrigin->mEdge->mId == e2->mId){
+        assert(false);
+        // edgeToMerge->mVertexOrigin->mEdge = e2->mEdgeLeftCCW;
+    }
 
     // update if self is right side
     if(pos == mesh::RCW || pos == mesh::RCCW){
+        // printf("\nPOS = Right\n");
         // update self
         mEdgeRightCCW = edgeToMerge->mEdgeRightCCW;
         mEdgeRightCW = edgeToMerge->mEdgeRightCW;
@@ -184,10 +175,16 @@ void mesh::Edge::mergeEdge(mesh::Edge* e2){
         // update RCW
         edgeToMerge->mEdgeRightCW->mEdgeRightCCW = this;
         e2->mEdgeLeftCW->mEdgeLeftCCW = mReverseEdge;
+
+        // remove the edges
+        e2->mToDelete = true;
+        edgeToMerge->mToDelete = true;
     }
 
     // update if self is left side
-    if(pos == mesh::LCW || pos == mesh::LCCW){
+    else if(pos == mesh::LCW || pos == mesh::LCCW){
+        assert(false);
+        // printf("\nPOS = Left\n");
         // update self
         // update LCW
         mEdgeLeftCW = edgeToMerge->mEdgeLeftCW;
@@ -208,4 +205,20 @@ void mesh::Edge::mergeEdge(mesh::Edge* e2){
         edgeToMerge->mEdgeLeftCCW->mReverseEdge->mEdgeRightCW = mReverseEdge;
     }
 
+}
+
+
+bool mesh::Edge::check() const{
+    // print();
+    if(mEdgeLeftCCW == mEdgeLeftCW)   return false;
+    if(mEdgeLeftCCW == mEdgeRightCW)  return false;
+    if(mEdgeLeftCCW == mEdgeRightCCW) return false;
+    if(mEdgeLeftCCW == mReverseEdge)  return false;
+    if(mEdgeLeftCW == mEdgeRightCW)   return false;
+    if(mEdgeLeftCW == mEdgeRightCCW)  return false;
+    if(mEdgeLeftCW == mReverseEdge)   return false;
+    if(mEdgeRightCW == mEdgeRightCCW) return false;
+    if(mEdgeRightCW == mReverseEdge)  return false;
+    if(mEdgeRightCCW == mReverseEdge) return false;
+    return true;
 }

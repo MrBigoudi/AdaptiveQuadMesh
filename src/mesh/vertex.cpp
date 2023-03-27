@@ -5,13 +5,13 @@
 
 int mesh::Vertex::ID_CPT = 0;
 
-std::string mesh::Vertex::toString(){
+std::string mesh::Vertex::toString() const {
     char buffer[50];
     sprintf(buffer, "v%d -> e%d, toDel = %d", mId, mEdge->mId, mToDelete);
     return buffer;
 }
 
-void mesh::Vertex::print(){
+void mesh::Vertex::print() const {
     fprintf(stdout, "%s\n", toString().c_str());
 }
 
@@ -110,15 +110,18 @@ std::string mesh::Vertex::listToString(std::vector<mesh::Vertex*> list){
 }
 
 bool mesh::Vertex::twoSameEdges(std::vector<mesh::Edge*> edges, int nbVertices){
-	std::vector<std::vector<int>> table(nbVertices, std::vector<int>(nbVertices, -1));
+	std::vector<std::vector<mesh::Edge*>> table(nbVertices, std::vector<mesh::Edge*>(nbVertices, nullptr));
     // printf("\nBefore nbVertices: %d\n", nbVertices);
     for(int i=0; i<int(edges.size()); i++){
         int v0 = edges[i]->mVertexOrigin->mId;
         int v1 = edges[i]->mVertexDestination->mId;
         // edges[i]->print();
         // printf("nbVertices: %d\n", nbVertices);
-        if(table[v0][v1] != -1) return true;
-        table[v0][v1] = edges[i]->mId;
+        if(table[v0][v1] != nullptr) {
+            // table[v0][v1]->print();
+            return true;
+        }
+        table[v0][v1] = edges[i];
     }
     return false;
 }
@@ -139,10 +142,12 @@ std::vector<mesh::Face*> mesh::Vertex::getSurroundingFaces() const{
     } else {
         e0 = mEdge->mReverseEdge;
         curEdge = mEdge->mReverseEdge;
+        assert(false);
     }
     
     do{
-        // curEdge->print();
+        // curEdge->print(); e0->print();
+        assert(curEdge->mVertexOrigin->mId == mId);
         curEdge = curEdge->mEdgeRightCCW->mReverseEdge;
         assert(curEdge);
         assert(curEdge->mFaceRight);
@@ -167,6 +172,7 @@ std::vector<mesh::Edge*> mesh::Vertex::getSurroundingEdges() const{
     }
 
     do{
+        assert(curEdge->mVertexOrigin->mId == mId);
         curEdge = curEdge->mEdgeRightCCW->mReverseEdge;
         assert(curEdge);
         assert(curEdge->mReverseEdge);
@@ -175,4 +181,16 @@ std::vector<mesh::Edge*> mesh::Vertex::getSurroundingEdges() const{
     } while(curEdge->mId != e0->mId);
     
     return edges;
+}
+
+void mesh::Vertex::mergeVertices(mesh::Vertex* v2, std::vector<mesh::Edge*> edges){
+    // printf("Vert to remove:\n"); v2->print();
+    // printf("Vert to keep:\n"); print();
+    assert(v2->mToDelete);
+    for(int i=0; i<int(edges.size()); i++){
+        // printf("Cur edge:\n"); surEdges[i]->print();
+        if(edges[i]->mVertexOrigin->mId == v2->mId) edges[i]->mVertexOrigin = this;
+        else if(edges[i]->mVertexDestination->mId == v2->mId) edges[i]->mVertexDestination = this;
+        else assert(false);
+    }
 }
