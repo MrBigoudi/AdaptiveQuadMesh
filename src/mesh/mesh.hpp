@@ -19,6 +19,17 @@ class Edge;
 */
 class Mesh{
 
+    private:
+        /**
+         * Constant value for calculating fitmaps
+        */
+        static int K_FITMAP;
+
+        /**
+         * Constant value for calculating fitmaps
+        */
+        static float R_FITMAP;
+
     public:
         /**
          *  The number of vertices in the mesh
@@ -457,6 +468,26 @@ class Mesh{
          * @param face The face to remove
         */
         void removeSinglet(mesh::Face* face);
+
+    private:
+        /**
+         * Build a simplify version of the S and M fitmaps for vertices
+         * @param k The number of faces arround the center to check for the BFS
+         * @param r The radius for which we want to find faces in
+        */
+        void buildVerticesFitmaps(int k, float r);
+
+        /**
+         * Build a simplify version of the S and M fitmaps for faces
+        */
+        void buildFacesFitmaps();
+
+        /**
+         * Build the mesh's fitmaps
+         * @param k The number of faces arround the center to check for the BFS
+         * @param r The radius for which we want to find faces in
+        */
+        void buildFitmaps(int k, float r);
 
 };
 

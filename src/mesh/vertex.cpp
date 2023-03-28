@@ -1,7 +1,9 @@
 #include "vertex.hpp"
+#include "maths.hpp"
 
 #include <sstream>
 #include <iterator>
+#include <set>
 
 int mesh::Vertex::ID_CPT = 0;
 
@@ -193,4 +195,101 @@ void mesh::Vertex::mergeVertices(mesh::Vertex* v2, std::vector<mesh::Edge*> edge
         else if(edges[i]->mVertexDestination->mId == v2->mId) edges[i]->mVertexDestination = this;
         else assert(false);
     }
+}
+
+std::vector<mesh::Vertex*> mesh::Vertex::getSurroundingVertices(int k) const{
+    std::set<mesh::Vertex*> surVertices;
+
+    // init with k = 0
+    std::vector<mesh::Face*> surFaces = getSurroundingFaces();
+    for(int i=0; i<int(surFaces.size()); i++){
+        std::vector<mesh::Vertex*> surVerticesTmp = surFaces[i]->getSurroundingVertices();
+        for(int j=0; j<int(surVerticesTmp.size()); j++){
+            surVertices.insert(surVerticesTmp[j]);
+        }
+    }
+
+    for(int i=0; i<k; i++){
+        std::set<mesh::Vertex*> surVerticesTmp;
+        for(int j=0; j<int(surVertices.size()); j++){
+            std::vector<mesh::Face*> surFaces = getSurroundingFaces();
+            for(int l=0; l<int(surFaces.size()); l++){
+                std::vector<mesh::Vertex*> surVerticesTmpTmp = surFaces[l]->getSurroundingVertices();
+                for(int m=0; m<int(surVerticesTmpTmp.size()); m++){
+                    surVerticesTmp.insert(surVerticesTmpTmp[m]);
+                }
+            }
+        }
+        surVertices.merge(surVerticesTmp);
+    }
+
+    std::vector<mesh::Vertex*> finalVertices (surVertices.begin(), surVertices.end());
+    return finalVertices;
+}
+
+float mesh::Vertex::getDistance(mesh::Vertex* v2) const{
+    return maths::Vector3::distance(mCoords, v2->mCoords);
+}
+
+std::vector<mesh::Vertex*> mesh::Vertex::getVerticesInRadius(std::vector<mesh::Vertex*> vertices, float r) const{
+    std::vector<mesh::Vertex*> res;
+    for(int i=0; i<int(vertices.size()); i++){
+        mesh::Vertex* curVertex = vertices[i];
+        if(getDistance(curVertex) <= r) res.push_back(curVertex);
+    }
+    return res;
+}
+
+float mesh::Vertex::getAverageEdgeLength(std::vector<mesh::Vertex*> vertices){
+    // get the surrounging edges
+    std::vector<mesh::Edge*> surEdges;
+    for(int i=0; i<int(vertices.size()); i++){
+        std::vector<mesh::Edge*> surEdgesTmp = vertices[i]->getSurroundingEdges();
+        surEdges.insert(surEdges.end(), surEdgesTmp.begin(), surEdgesTmp.end());
+    }
+
+    // calculate the average length
+    float sum = 0.0f;
+    for(int i=0; i<int(surEdges.size()); i++){
+        sum += surEdges[i]->getLength();
+    }
+
+    return sum / float(surEdges.size());
+}
+
+maths::Vector3* mesh::Vertex::getInterpolatedPlaneNormal(std::vector<mesh::Vertex*> vertices){
+    // create the plane (Ordinary Least Squares)
+    float sumX = 0.0f; float sumY = 0.0f; float sumZ = 0.0f;
+    float sumXY = 0.0f; float sumXZ = 0.0f; float sumYZ = 0.0f;
+    float sumXX = 0.0f; float sumYY = 0.0f;
+
+    for(int i=0; i<int(vertices.size()); i++){
+        maths::Vector3* curPoint = vertices[i]->mCoords;
+        float x = curPoint->x(); float y = curPoint->y(); float z = curPoint->z();
+        sumX += x; sumY += y; sumZ += z;
+        sumXX += x*x; sumYY += y*y;
+        sumXY += x*z; sumYZ += y*z;
+    }
+    glm::mat3 matA = {
+        sumXX, sumXY, sumX,
+        sumXY, sumYY, sumY,
+        sumX, sumY, vertices.size()
+    };
+    glm::vec3 vecB = {sumXZ, sumYZ, sumZ};
+
+    glm::vec3 planeCoeffs = glm::inverse(matA)*vecB;
+
+    // convert to vector3
+    return new maths::Vector3(planeCoeffs.x, planeCoeffs.y, planeCoeffs.z);
+}
+
+std::vector<float> mesh::Vertex::getSquaredDotProducts(maths::Vector3 normal, std::vector<mesh::Vertex*> vertices){
+    std::vector<float> dotProds;
+
+    for(int i=0; i<int(vertices.size()); i++){
+        float curDot = maths::Vector3::dot(normal.normalize(), vertices[i]->mCoords->normalize());
+        dotProds.push_back(curDot*curDot);
+    }
+
+    return dotProds;
 }

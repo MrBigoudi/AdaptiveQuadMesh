@@ -2,6 +2,8 @@
 
 #include "edge.hpp"
 #include "vertex.hpp"
+#include "maths.hpp"
+
 #include <vector>
 #include <algorithm>
 
@@ -84,6 +86,16 @@ class Face{
          * If the face needs an update
         */
         bool mToUpdate = false;
+
+        /**
+         * The face normal
+        */
+        maths::Vector3* mNormal;
+
+        /**
+         * Fitmaps
+        */
+        float mSFitmap = 0.0f, mMFitmap = 0.0f;
 
     public:
         /**

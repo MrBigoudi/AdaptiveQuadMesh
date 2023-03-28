@@ -41,6 +41,11 @@ class Vertex{
         */
         bool mToDelete = false;
 
+        /**
+         * Fitmaps
+        */
+        float mSFitmap = 0.0f, mMFitmap = 0.0f;
+
     public:
         /**
          * A basic constructor
@@ -133,6 +138,13 @@ class Vertex{
         std::vector<mesh::Face*> getSurroundingFaces() const;
 
         /**
+         * Get the vertices arround a vertex at a distance at most k from it
+         * @param k The max distance between vertices in the resulting list and the current one
+         * @return The list of vertices arround the vertex
+        */
+        std::vector<mesh::Vertex*> getSurroundingVertices(int k) const;
+
+        /**
          * Get the edges arround a vertex
          * @return The list of edges arround the vertex
         */
@@ -144,6 +156,45 @@ class Vertex{
          * @param edges The list of edges to update
         */
         void mergeVertices(mesh::Vertex* v2, std::vector<mesh::Edge*> edges);
+
+        /**
+         * Get the distance between two vertices
+         * @param v2 The vertex we want the distance to
+         * @return The distance as a floating point
+        */
+        float getDistance(mesh::Vertex* v2) const;
+
+        /**
+         * Get the number of vertices from a given list that are at a maximum distance of a given value from the current vertex
+         * @param vertices The vertices we want to compare
+         * @param r The radius to accept vertices
+         * @return The vertices in the range as a vector
+        */
+        std::vector<mesh::Vertex*> getVerticesInRadius(std::vector<mesh::Vertex*> vertices, float r) const;
+
+        /**
+         * Get teh average length of edges surrounding a given list of vertices
+         * @param vertices The list of vertices
+         * @return The average length as a floating point
+        */
+		static float getAverageEdgeLength(std::vector<mesh::Vertex*> vertices);
+
+        /**
+         * Get the normal of the plane creted from interpolation of the given vertices
+         * @param vertices The vertices to interpolate as a plane
+         * @return The normal of the plane
+        */
+		static maths::Vector3* getInterpolatedPlaneNormal(std::vector<mesh::Vertex*> vertices);
+
+        /**
+         * Get the dot products between a given normal and a list of vertices
+         * @param noraml The normal of a certain plane
+         * @param vertices The vertices we want to get the dot product with
+         * @return A list of floating point values
+        */
+        static std::vector<float> getSquaredDotProducts(maths::Vector3 normal, std::vector<mesh::Vertex*> vertices);
+
+
 };
 
 }

@@ -13,6 +13,10 @@
 #include "face.hpp"
 #include "mesh.hpp"
 #include "vector3.hpp"
+#include "utils.hpp"
+
+int mesh::Mesh::K_FITMAP = 2;
+float mesh::Mesh::R_FITMAP = 3.0f;
 
 void mesh::Mesh::checkCorrectness() const {
 	// printf("\nBeg check correctness\n");
@@ -539,12 +543,17 @@ void mesh::Mesh::triToQuad(){
 
 	// subdivide all remaining triangles
 	triToPureQuad();
-	removeDoublets(mFaces);
+	// removeDoublets(mFaces);
 	clean();
 	// printStats();
 	assert(howManyTriangles() == 0);
 
 	// print();
+	auto start = std::chrono::high_resolution_clock::now();
+	buildFitmaps(mesh::Mesh::K_FITMAP, mesh::Mesh::R_FITMAP);
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    printf("time build fitmaps: %f\n", double(duration.count()));
 }
 
 mesh::Face* mesh::Mesh::getTriangle() {
@@ -1712,4 +1721,74 @@ void mesh::Mesh::removeSinglet(mesh::Face* face){
 	edge->mVertexOrigin->mEdge = edge;
 	edge->mEdgeRightCW = nextEdge->mEdgeLeftCW->mReverseEdge;
 	edge->mEdgeRightCCW = nextEdge->mEdgeLeftCCW->mReverseEdge;
+}
+
+
+
+void mesh::Mesh::buildVerticesFitmaps(int k, float r){
+	// for each vertex p
+	float maxSMap = -INFINITY;
+	float maxMMap = -INFINITY;
+	for(int i=0; i<mNbVertices; i++){
+		mesh::Vertex* p = mVertices[i];
+
+		// s-map
+		// get all vertices surrounding it (from k faces apart)
+		std::vector<mesh::Vertex*> surVertices = p->getSurroundingVertices(k);
+		// get the average length of each edges around the vertices
+		float averageEdgeLength = mesh::Vertex::getAverageEdgeLength(surVertices);
+		// get the number of vertices inside a radius r from the origin p
+		std::vector<mesh::Vertex*> verticesInRadius = p->getVerticesInRadius(surVertices, r);
+		// get the s-map
+		p->mSFitmap = (verticesInRadius.size()*verticesInRadius.size()) / averageEdgeLength;
+
+		// m-map
+		// form plane with surrounding vertices
+		// get the normal n of that plane 
+		maths::Vector3* n = mesh::Vertex::getInterpolatedPlaneNormal(surVertices);
+		// for each faces inside the radius, get the dot product between its normal and n
+		std::vector<float> dotProducts = mesh::Vertex::getSquaredDotProducts(n, verticesInRadius);
+		// get the max of these values
+		p->mMFitmap = utils::maxFloat(dotProducts);
+
+		// update max of fitmaps
+		if(p->mMFitmap > maxMMap) maxMMap = p->mMFitmap;
+		if(p->mSFitmap > maxSMap) maxSMap = p->mSFitmap;
+	}
+	// normalize fitmaps
+	for(int i=0; i<mNbVertices; i++){
+		// printf("\n\nMaxMMap: %f, MaxSMap: %f\n", maxMMap, maxSMap);
+		mesh::Vertex* p = mVertices[i];
+		// printf("MMap before: %f\n", p->mMFitmap);
+		// printf("SMap before: %f\n", p->mSFitmap);
+		if(maxSMap)
+			p->mSFitmap /= maxSMap;
+		if(maxMMap)
+			p->mMFitmap /= maxMMap;
+		// printf("MMap after: %f\n", p->mMFitmap);
+		// printf("SMap after: %f\n\n", p->mSFitmap);
+	}
+}
+
+void mesh::Mesh::buildFacesFitmaps(){
+	// for each faces f
+	for(int i=0; i<mNbFaces; i++){
+		mesh::Face* f = mFaces[i];
+		// get interpolated values
+		std::vector<mesh::Vertex*> surVertices = f->getSurroundingVertices();
+		float sumSMap = 0.0f;
+		float sumMMap = 0.0f;
+		for(int j=0; j<int(surVertices.size()); j++){
+			sumSMap += surVertices[j]->mSFitmap;
+			sumMMap += surVertices[j]->mMFitmap;
+		}
+
+		f->mSFitmap = sumSMap / float(surVertices.size());
+		f->mMFitmap = sumMMap / float(surVertices.size());
+	}
+}
+
+void mesh::Mesh::buildFitmaps(int k, float r){
+	buildVerticesFitmaps(k, r);
+	buildFacesFitmaps();
 }

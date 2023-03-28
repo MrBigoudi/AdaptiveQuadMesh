@@ -64,6 +64,11 @@ class Object{
         */
         bool mDiagInit = false;
 
+        /**
+         * Draw fitmaos
+        */
+        bool mDrawSMap = false, mDrawMMap = false;
+
 
     public:
         /**
@@ -155,6 +160,21 @@ class Object{
          * Do a diagonal collapse
         */
         void diagonalCollapse();
+
+        /**
+         * Draw the S-fitmap
+        */
+        void drawSMap();
+
+        /**
+         * Draw the M-fitmap
+        */
+        void drawMMap();
+
+        /**
+         * Draw only the faces
+        */
+        void drawFaces();
 
     private:
         /**
