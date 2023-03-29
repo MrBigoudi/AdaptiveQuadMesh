@@ -10,7 +10,7 @@ std::vector<mesh::Edge*> mesh::Face::getSurroundingEdges(mesh::Edge* startingEdg
 
     mesh::Edge* e0 = startingEdge;
 
-    if (e0->mFaceLeft->mId == mId) {
+    if (e0->mFaceLeft->mId == mId && e0->mFaceRight->mId != mId) {
         e0 = e0->mReverseEdge;
         assert(false);
     }
@@ -100,7 +100,10 @@ std::vector<mesh::Face*> mesh::Face::getAllSurroundingFaces() const{
                         break;
                     }
                 }
-                if(!alreadyAdded) surFaces.push_back(surFacesTmp[j]);
+                if(!alreadyAdded) {
+                    // surFacesTmp[j]->print();
+                    surFaces.push_back(surFacesTmp[j]);
+                }
             }
         }
     }
@@ -286,13 +289,18 @@ void mesh::Face::createDiagonal(){
     }
 
     if(v1 && v2){
-        mesh::Diagonal* diag = new mesh::Diagonal();
-        diag->face = this;
-        diag->v1 = v1;
-        diag->v2 = v2;
-        diag->length = minDiag;
-
-        mDiagonal = diag;
+        if(mDiagonal == nullptr){ // init the diagonal
+            mesh::Diagonal* diag = new mesh::Diagonal();
+            diag->face = this;
+            diag->v1 = v1;
+            diag->v2 = v2;
+            diag->length = minDiag;
+            mDiagonal = diag;
+        } else { // update current diagonal
+            mDiagonal->v1 = v1;
+            mDiagonal->v2 = v2;
+            mDiagonal->length = minDiag;
+        }
     } else mDiagonal = nullptr;
 }
 

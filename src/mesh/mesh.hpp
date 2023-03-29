@@ -435,8 +435,9 @@ class Mesh{
 
         /**
          * Collapse diagonal
+         * @return UPDATE if a diagonal was collapsed, NO_UPDATE otherwise and EMPTY_HEAP if the heap is empty
         */
-        void diagonalCollapse();
+        int diagonalCollapse();
 
         /**
          * Clean the mesh
@@ -445,8 +446,9 @@ class Mesh{
 
         /**
          * Update the diagonal heap
+         * @param faces The faces to update
         */
-        void updateDiagonals();
+        void updateDiagonals(std::vector<mesh::Face*> faces);
 
     private:
         /**

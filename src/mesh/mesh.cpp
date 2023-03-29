@@ -35,6 +35,8 @@ void mesh::Mesh::checkCorrectness() const {
 		assert(!mFaces[i]->mEdge->mToDelete);
 		surEdges = mFaces[i]->getSurroundingEdges();
 		assert(!mesh::Edge::hasDoubles(surEdges));
+		assert(!mFaces[i]->isSinglet());
+		assert(mFaces[i]->isDoublet().size() == 0);
 	}
 	// printf("End check faces\n");
 
@@ -559,7 +561,7 @@ void mesh::Mesh::triToQuad(){
 	removeMarkedEdges();
 	clean();
 	// printStats();
-	checkCorrectness();
+	// checkCorrectness();
 
 	// subdivide all remaining triangles
 	triToPureQuad();
@@ -1327,19 +1329,21 @@ void mesh::Mesh::initDiagonals(){
 	// for(int i=0; i<nbDiags; i++) mDiagHeap[i]->face->print();
 }
 
-void mesh::Mesh::diagonalCollapse(){
-	if(mDiagHeap.size() == 0) return;
+int mesh::Mesh::diagonalCollapse(){
+	if(mDiagHeap.size() == 0) return EMPTY_HEAP;
 	mesh::Diagonal* diag = mDiagHeap.front();
 	assert(diag != nullptr);
-	assert(!diag->face->mToDelete);
-	assert(!diag->v1->mToDelete);
-	assert(!diag->v2->mToDelete);
 	std::pop_heap(mDiagHeap.begin(), mDiagHeap.end());
 	mDiagHeap.pop_back();
-	// diag->face->print();
 
+	if(diag->face->mToDelete) return NO_UPDATE;
+
+	// printf("Cur face:\n");
+	// diag->face->print();
+	// diag->face->mEdge->print();
 	// printf("get sur faces:\n");
-	// std::vector<mesh::Face*> surFaces = diag->face->getSurroundingFaces();
+	// std::vector<mesh::Face*> surFaces = diag->face->getAllSurroundingFaces();
+	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
 	// printf("\ndone\nget v2 sur edges:\n");
 	// diag->v2->print();
 	// diag->v2->mEdge->print();
@@ -1358,12 +1362,8 @@ void mesh::Mesh::diagonalCollapse(){
 
 	// update old vertex coordinate
 	diag->v1->mCoords = new maths::Vector3((*(diag->v1->mCoords) + *(diag->v2->mCoords)) / 2.0f);
-	// printf("\nv1:\n");
-	// diag->v1->print();
-	// diag->v1->mEdge->print();
-	// printf("v2:\n");
-	// diag->v2->print();
-	// diag->v2->mEdge->print();
+	// printf("\nv1:\n"); diag->v1->print(); diag->v1->mEdge->print();
+	// printf("v2:\n"); diag->v2->print(); diag->v2->mEdge->print();
 	// printf("\n\n");
 
 	// get edge that goes into the vertex we'll keep
@@ -1374,20 +1374,20 @@ void mesh::Mesh::diagonalCollapse(){
 	// the edges to merge
 	mesh::Edge* edgeToRemove1 = edgeToKeep1->mEdgeRightCCW;
 	mesh::Edge* edgeToRemove2 = edgeToKeep2->mEdgeRightCW;
-	
-	// printf("Edge to keep1\n"); edgeToKeep1->print();
-	// printf("Edge to remove1:\n"); edgeToRemove1->print();
-	// printf("Edge to keep2\n"); edgeToKeep2->print();
-	// printf("Edge to remove 2:\n"); edgeToRemove2->print();
 
 	std::vector<mesh::Face*> toUpdate = diag->face->getAllSurroundingFaces();
+
 	// printf("Face before merge:\n"); diag->face->print();
-	// std::vector<mesh::Face*> surFaces = diag->face->getAllSurroundingFaces();
 	// printf("\nSurFaces:\n");
+	// std::vector<mesh::Face*> surFaces = toUpdate;
 	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
 	// printf("done SurFaces");
 	// printf("\nv1:\n"); diag->v1->print(); diag->v1->mEdge->print();
 	// printf("v2:\n"); diag->v2->print(); diag->v2->mEdge->print(); printf("\n\n");
+	// printf("Edge to keep1\n"); edgeToKeep1->print();
+	// printf("Edge to remove1:\n"); edgeToRemove1->print();
+	// printf("Edge to keep2\n"); edgeToKeep2->print();
+	// printf("Edge to remove 2:\n"); edgeToRemove2->print();
 
 	// merge the edges
 	edgeToKeep1->mergeEdge(edgeToRemove1);
@@ -1428,23 +1428,25 @@ void mesh::Mesh::diagonalCollapse(){
 	// printf("\ndone SurFaces:\n");
 
 	// get the faces to update
-	std::vector<mesh::Face*> toUpdateDistance = diag->v1->getSurroundingFaces();
-	mesh::Face::markToUpdate(toUpdateDistance);
+	// std::vector<mesh::Face*> toUpdateDistance = diag->v1->getSurroundingFaces();
+	// mesh::Face::markToUpdate(toUpdateDistance);
 
-	auto start = std::chrono::high_resolution_clock::now();
+	// auto start = std::chrono::high_resolution_clock::now();
 	// remove the doublets
 	removeDoublets(toUpdate);
-	auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    printf("time remove doublets: %f\n", double(duration.count()));
+	// auto stop = std::chrono::high_resolution_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("time remove doublets: %f\n", double(duration.count()));
 
-	start = std::chrono::high_resolution_clock::now();
-	// update the heap
-	updateDiagonals();	
+	// start = std::chrono::high_resolution_clock::now();
+	// update the diagonals
+	updateDiagonals(toUpdate);	
 	// initDiagonals();
-	stop = std::chrono::high_resolution_clock::now();
-	duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    printf("time update diagonals: %f\n", double(duration.count()));
+	// stop = std::chrono::high_resolution_clock::now();
+	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("time update diagonals: %f\n", double(duration.count()));
+
+	return UPDATE;
 }
 
 
@@ -1541,42 +1543,11 @@ void mesh::Mesh::clean(){
 	removeVerticesFromList();
 }
 
-void mesh::Mesh::updateDiagonals(){
-	int i=0;
-	while(i<int(mDiagHeap.size())){
-		// printf("Update diagonals: %d/%d\n", i, int(mDiagHeap.size()));
-		mesh::Diagonal* curDiag = mDiagHeap[i];
-
-		// if not a valid face anymore
-		if(curDiag->face->mToDelete){
-			// printf("Face deleted\n");
-			mDiagHeap.erase(mDiagHeap.begin()+i);
-			if(i==0) std::make_heap(mDiagHeap.begin(), mDiagHeap.end(), mesh::Face::cmpDiagonal);
-			continue;
-		}
-
-		// if vertices were removed
-		if(curDiag->v1->mToDelete || curDiag->v2->mToDelete){
-			// printf("Vertices deleted\n");
-			mDiagHeap.erase(mDiagHeap.begin()+i);
-			curDiag->face->createDiagonal();
-			mDiagHeap.push_back(curDiag->face->mDiagonal);
-			std::push_heap(mDiagHeap.begin(), mDiagHeap.end());
-			continue;
-		}
-
-		// update diagonal if the face needs a distance update
-		if(curDiag->face->mToUpdate){
-			// printf("Distance to update\n");
-			mDiagHeap.erase(mDiagHeap.begin()+i);
-			curDiag->face->createDiagonal();
-			curDiag->face->mToUpdate = false;
-			mDiagHeap.push_back(curDiag->face->mDiagonal);
-			std::push_heap(mDiagHeap.begin(), mDiagHeap.end());
-			continue;
-		}
-
-		i++;
+void mesh::Mesh::updateDiagonals(std::vector<mesh::Face*> toUpdate){
+	for(int i=0; i<int(toUpdate.size()); i++){
+		// printf("Update diagonals: %d/%d\n", i, int(toUpdate.size()));
+		if(toUpdate[i]->mToDelete) continue;
+		toUpdate[i]->createDiagonal();
 	}
 	// std::make_heap(mDiagHeap.begin(), mDiagHeap.end(), mesh::Face::cmpDiagonal);
 }
@@ -1638,6 +1609,17 @@ void mesh::Mesh::removeDoublets(std::vector<mesh::Face*> faces){
 		// printf("r doublet i: %d\n", i);
 		// f1->print();
 
+		// if singlet
+		if(f1->isSinglet()){
+			// std::vector<mesh::Face*> toUpdate = f1->getAllSurroundingFaces();
+			removeSinglet(f1);
+			printf("removed\n");
+			// mesh::Face::markToUpdate(toUpdate);
+			// removeDoublets(toUpdate);
+			// updateDiagonals(toUpdate);
+			continue;
+		}
+
 		// if doublet
 		std::vector<mesh::Edge*> doubletEdges = f1->isDoublet();
 		if(doubletEdges.size() > 0){
@@ -1656,34 +1638,33 @@ void mesh::Mesh::removeDoublets(std::vector<mesh::Face*> faces){
 			// printf("Get surrounding faces\n");
 			toUpdate.push_back(f1);
 
-			mesh::Face::markToUpdate(toUpdate);
+			// mesh::Face::markToUpdate(toUpdate);
 			removeDoublets(toUpdate);
+			updateDiagonals(toUpdate);
 		}
 
-		// if singlet
-		if(f1->isSinglet()){
-			std::vector<mesh::Face*> toUpdate = f1->getAllSurroundingFaces();
-			removeSinglet(f1);
-			mesh::Face::markToUpdate(toUpdate);
-			removeDoublets(toUpdate);
-		}
+		// if(f1->mToDelete) continue;
 
 	}
 }
 
 void mesh::Mesh::removeSinglet(mesh::Face* face){
-	printf("\nSinglet removal:\n");
+	// printf("\nSinglet removal:\n");
+	// face->print();
 	std::vector<mesh::Edge*> surEdges = face->getSurroundingEdges(face->mEdge);
-	mesh::Edge* edge = face->mEdge;
+	mesh::Edge* edge = nullptr;
 	for(int i=0; i<int(surEdges.size()); i++){
 		mesh::Edge* curEdge = surEdges[i];
-		mesh::Edge* ccwTmp = curEdge->mEdgeRightCCW;
-		mesh::Edge* ccwCcwTmp = ccwTmp->mEdgeRightCCW;
-		if((ccwTmp->mVertexOrigin == ccwCcwTmp->mVertexDestination) && (ccwTmp->mVertexDestination == ccwCcwTmp->mVertexOrigin)){
+		int nbEdges = curEdge->mEdgeRightCCW->mVertexOrigin->getSurroundingEdges().size();
+		// printf("Cur vertex:\n");
+		// curEdge->mEdgeRightCCW->mVertexOrigin->print();
+		// printf("Nb edges:%d\n", nbEdges);
+		if( nbEdges == 2){
 			edge = curEdge;
 			break;
 		}
 	}
+	assert(edge!=nullptr);
 
 	mesh::Edge* nextEdge = edge->mEdgeRightCW;
 
@@ -1695,6 +1676,7 @@ void mesh::Mesh::removeSinglet(mesh::Face* face){
 	nextEdge->mToDelete = true;
 	nextEdge->mReverseEdge->mToDelete = true;
 	face->mToDelete = true;
+	edge->mEdgeRightCCW->mVertexOrigin->mToDelete = true;
 
 	// std::vector<mesh::Face*> surFaces = face->getAllSurroundingFaces();
 	// printf("face singlet:\n"); face->print();
@@ -1711,17 +1693,23 @@ void mesh::Mesh::removeSinglet(mesh::Face* face){
 
 	// printf("v ccw:\n"); edge->mEdgeRightCCW->mVertexOrigin->print();
 
-	surEdges = edge->mEdgeRightCCW->mVertexOrigin->getSurroundingEdges();
+	// surEdges = edge->mEdgeRightCCW->mVertexOrigin->getSurroundingEdges();
 	// printf("\nsur edges of v\n");
 	// for(int i=0; i<int(surEdges.size()); i++) surEdges[i]->print();
 	// printf("done sur edges of v\n");
 
-	assert(surEdges.size() == 2);
+	// assert(surEdges.size() == 2);
 
 	// update old vertices' edges
 	if(nextEdge->mVertexOrigin->mEdge->mId == nextEdge->mId){
 		nextEdge->mVertexOrigin->mEdge = nextEdge->mReverseEdge->mEdgeRightCW;
 	} else if(nextEdge->mVertexOrigin->mEdge->mId == nextEdge->mReverseEdge->mId){
+		assert(false);
+	}
+	// update old face' edge
+	if(nextEdge->mFaceLeft->mEdge->mId == nextEdge->mReverseEdge->mId){
+		nextEdge->mFaceLeft->mEdge = nextEdge->mReverseEdge->mEdgeRightCW;
+	} else if(nextEdge->mFaceLeft->mEdge->mId == nextEdge->mId){
 		assert(false);
 	}
 
@@ -1736,6 +1724,8 @@ void mesh::Mesh::removeSinglet(mesh::Face* face){
 	edge->mVertexOrigin->mEdge = edge;
 	edge->mEdgeRightCW = nextEdge->mEdgeLeftCW->mReverseEdge;
 	edge->mEdgeRightCCW = nextEdge->mEdgeLeftCCW->mReverseEdge;
+	edge->mReverseEdge->mEdgeLeftCCW = nextEdge->mEdgeLeftCCW;
+	edge->mReverseEdge->mEdgeLeftCW = nextEdge->mEdgeLeftCW;
 }
 
 
@@ -2005,7 +1995,7 @@ void mesh::Mesh::initRadii(){
 	float b = r0 - a;
 
 	for(int i=0; i<=H_FITMAP; i++){
-		printf("radii[%d]: %f\n", i, a*exp(i)+b);
+		// printf("radii[%d]: %f\n", i, a*exp(i)+b);
 		mRadii.push_back(a*exp(i) + b);
 	}
 }

@@ -80,7 +80,7 @@ class Face{
         /**
          * The face shortest diagonal
         */
-        mesh::Diagonal* mDiagonal;
+        mesh::Diagonal* mDiagonal = nullptr;
 
         /**
          * If the face needs an update
