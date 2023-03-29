@@ -297,7 +297,10 @@ void mesh::Face::createDiagonal(){
 }
 
 mesh::Diagonal* mesh::Face::cmpDiagonal(mesh::Diagonal* d1, mesh::Diagonal* d2){
-    if(d1->length < d2->length) return d1;
+    float priorityD1 = d1->length * d1->face->mSFitmap;
+    float priorityD2 = d2->length * d2->face->mSFitmap;
+
+    if(priorityD1 < priorityD2) return d1;
     return d2;
 }
 

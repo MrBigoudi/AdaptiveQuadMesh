@@ -257,7 +257,7 @@ float mesh::Vertex::getAverageEdgeLength(std::vector<mesh::Vertex*> vertices){
     return sum / float(surEdges.size());
 }
 
-maths::Vector3* mesh::Vertex::getInterpolatedPlaneNormal(std::vector<mesh::Vertex*> vertices){
+maths::Vector3* mesh::Vertex::getInterpolatedPlane(std::vector<mesh::Vertex*> vertices){
     // create the plane (Ordinary Least Squares)
     float sumX = 0.0f; float sumY = 0.0f; float sumZ = 0.0f;
     float sumXY = 0.0f; float sumXZ = 0.0f; float sumYZ = 0.0f;

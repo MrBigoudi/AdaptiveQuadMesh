@@ -15,8 +15,8 @@
 #include "vector3.hpp"
 #include "utils.hpp"
 
-int mesh::Mesh::K_FITMAP = 2;
-float mesh::Mesh::R_FITMAP = 3.0f;
+int mesh::Mesh::H_FITMAP = 8;
+float mesh::Mesh::THO_FITMAP = 0.05f;
 
 void mesh::Mesh::checkCorrectness() const {
 	// printf("\nBeg check correctness\n");
@@ -221,8 +221,16 @@ mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
 			continue;
 	}
 
+	mesh::Mesh mesh = mesh::Mesh::objToMesh(vertices, faces);
+
+	auto start = std::chrono::high_resolution_clock::now();
+	mesh.buildFitmaps();
+	auto stop = std::chrono::high_resolution_clock::now();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    printf("time build fitmaps: %f\n", double(duration.count()));
+
 	// convert the mesh to winged-edge form
-	return mesh::Mesh::objToMesh(vertices, faces);
+	return mesh;
 }
 
 
@@ -263,6 +271,8 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 	for (int i = 0; i < int(faces.size()); i++) {
 		mesh::Face* f = faceList[i];
 		
+		std::vector<maths::Vector3*> pointsOfPlane;
+
 		for (int v = 0; v < vnum; v++) {
 			int v0 = faces[i][v];
 			int v1 = faces[i][(v+1)%vnum];
@@ -279,6 +289,12 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 
 			vStart = vertexList[v0];
 			vEnd = vertexList[v1];
+			// update vertices neighbours
+			vStart->mNeighbours.push_back(vEnd);
+			vStart->mNeighboursFaces.push_back(f);
+
+			pointsOfPlane.push_back(vStart->mCoords);
+
 			eCur = edgeList[idx];
 
 			eCur->mVertexOrigin = vStart;
@@ -297,6 +313,10 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 			f->mEdge = eCur;
 			vStart->mEdge = eCur;
 		}
+
+		// create the normal
+		f->mNormal = maths::Vector3::getNormalOfPlane(pointsOfPlane[0], pointsOfPlane[1], pointsOfPlane[2]);
+
 	}
 
 	// save left according to the table
@@ -549,11 +569,6 @@ void mesh::Mesh::triToQuad(){
 	assert(howManyTriangles() == 0);
 
 	// print();
-	auto start = std::chrono::high_resolution_clock::now();
-	buildFitmaps(mesh::Mesh::K_FITMAP, mesh::Mesh::R_FITMAP);
-	auto stop = std::chrono::high_resolution_clock::now();
-	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    printf("time build fitmaps: %f\n", double(duration.count()));
 }
 
 mesh::Face* mesh::Mesh::getTriangle() {
@@ -1724,36 +1739,216 @@ void mesh::Mesh::removeSinglet(mesh::Face* face){
 }
 
 
+std::vector<std::vector<mesh::Vertex*>> mesh::Mesh::initNeighbourhood(mesh::Vertex* v) const{
+	int nbRadii = mRadii.size();
+	std::vector<std::vector<mesh::Vertex*>> neighbours(nbRadii);
 
-void mesh::Mesh::buildVerticesFitmaps(int k, float r){
-	// for each vertex p
+	const int VISITED = 1;
+	const int ONGOING = 2;
+
+	// initiate a dictionary containing the vertex's id as keys and the state of each vertices (unvisited, ongoing or visited) as values
+	int status[mNbVertices];
+
+	status[v->mId] = ONGOING;
+
+	// initiate the queue for the BFS search
+	std::queue<mesh::Vertex*> queue;
+	queue.push(v);
+
+	while(!queue.empty()){
+		// remove current vertex from queue
+		mesh::Vertex* curVertex = queue.front();
+		queue.pop();
+
+		// for each neighbours
+		std::vector<mesh::Vertex*> curNeighbours = curVertex->mNeighbours;
+		// printf("\nnbNeighbours: %d\n", int(neighbours.size()));
+		for(int i=0; i<int(curNeighbours.size()); i++){
+			mesh::Vertex* curNeighbourVertex = curNeighbours[i];
+
+			if(status[curNeighbourVertex->mId] == ONGOING || status[curNeighbourVertex->mId] == VISITED) continue;
+			bool toVisit = false;
+
+			// get the distance between the vertices
+			float dist = maths::Vector3::distance(v->mCoords, curNeighbourVertex->mCoords);
+			assert(dist>=0.0f);
+
+			// push the vertex in the array if in radii
+			for(int j=0; j<nbRadii; j++){
+				if(dist<mRadii[j]){
+					neighbours[j].push_back(curNeighbourVertex);
+					toVisit = true;
+				}
+			}
+
+			// if current vertex not visited yet add it to the queue
+			status[curNeighbourVertex->mId] = ONGOING;
+			if(toVisit){
+				queue.push(curNeighbourVertex);
+			}
+		}
+
+		// done visiting the current vertex
+		status[curVertex->mId] = VISITED;
+	}
+
+
+	// // naive O(n2) implementation
+	// for(int i=0; i<mNbVertices; i++){
+	// 	mesh::Vertex* curVertex = mVertices[i];
+	// 	if(curVertex->mId == v->mId) continue;
+
+	// 	// get the distance between the verties
+	// 	float dist = maths::Vector3::distance(v->mCoords, curVertex->mCoords);
+
+	// 	// push the vertex in the array if in radii
+	// 	for(int j=0; j<nbRadii; j++){
+	// 		if(dist<mRadii[j]) neighbours[j].push_back(curVertex);
+	// 	}
+	// }
+
+	return neighbours;
+}
+
+
+float mesh::Mesh::getFittingError(std::vector<mesh::Vertex*> bpi, maths::Vector3 plane) const {
+	float sum = 0.0f;
+	int bpiSize = int(bpi.size());
+
+	int a = plane.x();
+	int b = plane.y();
+	int c = plane.z();
+
+	for(int i=0; i<bpiSize; i++){
+		maths::Vector3* coords = bpi[i]->mCoords;
+
+		float realZ = coords->z();
+		float estiZ = a*coords->x() + b*coords->y() + c;
+
+		sum += (realZ-estiZ) * (realZ-estiZ);
+	}
+
+	return (bpiSize==0) ? 0.0f : ((1.0f)/bpiSize) * sqrtf(sum);
+}
+
+float mesh::Mesh::getQuadraticFittingErrors(std::vector<float> errors) const{
+	float sum = 0.0f;
+
+	for(int i=0; i<int(mRadii.size()); i++){
+		float ri_2 = mRadii[i]*mRadii[i];
+		float Eri = errors[i];
+
+		sum += ri_2*Eri;
+	}
+
+	return sum;
+}
+
+int mesh::Mesh::getNbConsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace){
+	int bpiSize = int(bpiFace.size());
+
+	int nbFaces = 0;
+
+	// for each faces get the dot product between n and the normal of the face
+	for(int i=0; i<bpiSize; i++){
+		float dot = maths::Vector3::dot(n, bpiFace[i]->mNormal);
+		// if positive increase the sum
+		if(dot>0) nbFaces++;
+	}
+
+	return nbFaces;
+}
+
+std::vector<std::vector<mesh::Face*>> mesh::Mesh::initNeighbourhoodFaces(std::vector<std::vector<mesh::Vertex*>> bpis){
+	int nbRadii = mRadii.size();
+	std::vector<std::vector<mesh::Face*>> faces(nbRadii);
+
+	std::vector<mesh::Vertex*> bph = bpis[nbRadii-1];
+
+	int i=0; int curMinRadii = 0;
+	while(i<int(bph.size())){
+		mesh::Vertex* curVertex = bph[i];
+		std::vector<mesh::Face*> surFaces = curVertex->mNeighboursFaces;
+
+		if(i>=int(bpis[curMinRadii].size())) curMinRadii++;
+
+		for(int j=curMinRadii; j<nbRadii; j++){
+			faces[j].insert(faces[j].end(), surFaces.begin(), surFaces.end());
+		}
+
+		i++;
+	}
+
+	return faces;
+}
+
+
+
+void mesh::Mesh::buildVerticesFitmaps(){
 	float maxSMap = -INFINITY;
 	float maxMMap = -INFINITY;
+
+	// for each vertex p
 	for(int i=0; i<mNbVertices; i++){
 		mesh::Vertex* p = mVertices[i];
 
-		// s-map
-		// get all vertices surrounding it (from k faces apart)
-		std::vector<mesh::Vertex*> surVertices = p->getSurroundingVertices(k);
-		// get the average length of each edges around the vertices
-		float averageEdgeLength = mesh::Vertex::getAverageEdgeLength(surVertices);
-		// get the number of vertices inside a radius r from the origin p
-		std::vector<mesh::Vertex*> verticesInRadius = p->getVerticesInRadius(surVertices, r);
-		// get the s-map
-		p->mSFitmap = (verticesInRadius.size()*verticesInRadius.size()) / averageEdgeLength;
+		// create the neighbourhoods
+		// auto start = std::chrono::high_resolution_clock::now();
+		std::vector<std::vector<mesh::Vertex*>> bpis = initNeighbourhood(p);
+		std::vector<std::vector<mesh::Face*>> bpisFaces = initNeighbourhoodFaces(bpis);
+		// auto stop = std::chrono::high_resolution_clock::now();
+		// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    	// printf("init neighbourhood: %f\n", double(duration.count()));
 
-		// m-map
-		// form plane with surrounding vertices
-		// get the normal n of that plane 
-		maths::Vector3* n = mesh::Vertex::getInterpolatedPlaneNormal(surVertices);
-		// for each faces inside the radius, get the dot product between its normal and n
-		std::vector<float> dotProducts = mesh::Vertex::getSquaredDotProducts(n, verticesInRadius);
-		// get the max of these values
-		p->mMFitmap = utils::maxFloat(dotProducts);
+		// the fitting errors
+		std::vector<float> errors;
 
-		// update max of fitmaps
-		if(p->mMFitmap > maxMMap) maxMMap = p->mMFitmap;
+		// float largest radii for mMap calculation
+		float largestRadii = mRadii[0];
+
+		// for each radii neighbourhood
+		for(int j=0; j<int(bpis.size()); j++){
+			std::vector<mesh::Vertex*> bpi = bpis[j];
+			std::vector<mesh::Face*> bpiFace = bpisFaces[j];
+			int bpiSize = bpi.size();
+			
+			// get the fitting plane using OLS
+			maths::Vector3* interpolatedPlane = mesh::Vertex::getInterpolatedPlane(bpi);
+
+			// mMap
+			float a = interpolatedPlane->x(); float b = interpolatedPlane->y();	float c = interpolatedPlane->z();
+			maths::Vector3 p1(0.0f,0.0f,c); maths::Vector3 p2(1.0f,0.0f,a+c); maths::Vector3 p3(0.0f,1.0f,b+c);
+			// get the normal of the plane
+			maths::Vector3* n = maths::Vector3::getNormalOfPlane(p1, p2, p3);
+			
+			// auto start = std::chrono::high_resolution_clock::now();
+			// get the number of consistently oriented faces
+			int nbConsistentlyOriented = getNbConsistentlyOriented(n, bpiFace);
+			// auto stop = std::chrono::high_resolution_clock::now();
+			// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+			// printf("get consistently oriented: %f\n", double(duration.count()));
+			
+			// check if ratio greater than tolerance
+			float ratio = bpiSize >=0 ? float(nbConsistentlyOriented) / float(bpiSize) : 0.0f;
+			if( ratio > THO_FITMAP ) largestRadii = mRadii[j];
+
+			// back to sMap
+			// get the fitting error
+			float Eri = getFittingError(bpi, interpolatedPlane);
+			errors.push_back(Eri);
+		}
+
+		// get the quadratic error regression
+		float a = getQuadraticFittingErrors(errors);
+		// assign the sMap
+		p->mSFitmap = sqrtf(a);
+		// assign the mMap
+		p->mMFitmap = largestRadii;
+
+		// update max
 		if(p->mSFitmap > maxSMap) maxSMap = p->mSFitmap;
+		if(p->mMFitmap > maxMMap) maxMMap = p->mMFitmap;
+		
 	}
 	// normalize fitmaps
 	for(int i=0; i<mNbVertices; i++){
@@ -1788,7 +1983,29 @@ void mesh::Mesh::buildFacesFitmaps(){
 	}
 }
 
-void mesh::Mesh::buildFitmaps(int k, float r){
-	buildVerticesFitmaps(k, r);
+void mesh::Mesh::buildFitmaps(){
+	initRadii();
+	buildVerticesFitmaps();
 	buildFacesFitmaps();
+}
+
+void mesh::Mesh::initRadii(){
+	// get the average edge's length
+	float sumEdges = 0.0f;
+	for(int i=0; i<mNbEdges; i++){
+		sumEdges += mEdges[i]->getLength();
+	}
+	float r0 = sumEdges / mNbEdges;
+
+	// get the diagonal of the bounding box
+	float rh = 0.25f * maths::Vector3(getWidth(), getHeight(), getDepth()).norm();
+
+	// get the equation for the radii distribution
+	float a = (r0-rh) / (1-exp(H_FITMAP));
+	float b = r0 - a;
+
+	for(int i=0; i<=H_FITMAP; i++){
+		printf("radii[%d]: %f\n", i, a*exp(i)+b);
+		mRadii.push_back(a*exp(i) + b);
+	}
 }

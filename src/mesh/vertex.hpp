@@ -46,6 +46,16 @@ class Vertex{
         */
         float mSFitmap = 0.0f, mMFitmap = 0.0f;
 
+        /**
+         * The list of neighbour vertices (at initialization)
+        */
+        std::vector<mesh::Vertex*> mNeighbours;
+
+        /**
+         * The list of neighbour faces (at initialization)
+        */
+        std::vector<mesh::Face*> mNeighboursFaces;
+
     public:
         /**
          * A basic constructor
@@ -180,11 +190,11 @@ class Vertex{
 		static float getAverageEdgeLength(std::vector<mesh::Vertex*> vertices);
 
         /**
-         * Get the normal of the plane creted from interpolation of the given vertices
+         * Get the plane creted from interpolation of the given vertices
          * @param vertices The vertices to interpolate as a plane
-         * @return The normal of the plane
+         * @return The plane a, b, and c values in a vector3
         */
-		static maths::Vector3* getInterpolatedPlaneNormal(std::vector<mesh::Vertex*> vertices);
+		static maths::Vector3* getInterpolatedPlane(std::vector<mesh::Vertex*> vertices);
 
         /**
          * Get the dot products between a given normal and a list of vertices

@@ -248,6 +248,22 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
     exit(EXIT_SUCCESS);
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // void testObject(std::string path){
 //     printf("\n%s:\n", path.c_str());
 //     mesh::Mesh fromObj = mesh::Mesh::loadOBJ(path);
@@ -269,7 +285,7 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 //     // testObject("media/objects/chess_piece.obj");
 //     // testObject("media/objects/venus.obj");
 //     // testObject("media/objects/garg.obj");
-//     testObject("media/objects/bunny.obj");
+//     // testObject("media/objects/bunny.obj");
 //     // testObject("media/objects/armadillo.obj");
 
 //     // fromObj.checkCorrectness();
@@ -304,29 +320,29 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 
 //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunnyQuad.obj");
 //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
-//     // fromObj.triToQuad();
-//     // fromObj.checkCorrectness();
-//     // fromObj.initDiagonals();
+//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
+//     fromObj.triToQuad();
+//     fromObj.checkCorrectness();
+//     fromObj.initDiagonals();
 //     // // fromObj.removeDoublets(fromObj.mFaces);
 //     // // fromObj.clean();
 //     // // fromObj.checkCorrectness();
 //     // int nbCollapses = fromObj.mNbFaces >> 1;
-//     // // int nbCollapses = 15000;
-//     // for(int i=0; i<nbCollapses; i++){
-//     //     printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
-//     //     auto start = std::chrono::high_resolution_clock::now();
-//     //     fromObj.diagonalCollapse();
-//     //     auto stop = std::chrono::high_resolution_clock::now();
-//     //     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-//     //     printf("time diagonal collapse: %f\n", double(duration.count()));
-//     //     fromObj.clean();
-//     //     fromObj.checkCorrectness(); 
-//     // }
+//     int nbCollapses = 15000;
+//     for(int i=0; i<nbCollapses; i++){
+//         printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
+//         auto start = std::chrono::high_resolution_clock::now();
+//         fromObj.diagonalCollapse();
+//         auto stop = std::chrono::high_resolution_clock::now();
+//         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//         printf("time diagonal collapse: %f\n", double(duration.count()));
+//         fromObj.clean();
+//         fromObj.checkCorrectness(); 
+//     }
 //     // fromObj.clean();
 //     // fromObj.checkCorrectness(); 
 //     // fromObj.printStats();
-//     // fromObj.toObj("bin/objects/tmp.obj");
+//     fromObj.toObj("bin/objects/tmp.obj");
 
 //     exit(EXIT_SUCCESS);
 // }

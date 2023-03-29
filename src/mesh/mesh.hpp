@@ -23,28 +23,23 @@ class Mesh{
         /**
          * Constant value for calculating fitmaps
         */
-        static int K_FITMAP;
-
-        /**
-         * Constant value for calculating fitmaps
-        */
-        static float R_FITMAP;
+        static int H_FITMAP; static float THO_FITMAP;
 
     public:
         /**
          *  The number of vertices in the mesh
         */
-        int mNbVertices;
+        int mNbVertices = 0;
 
         /**
          * The number of faces in the mesh
         */
-        int mNbFaces;
+        int mNbFaces = 0;
 
         /**
          * The number of edges in the mesh
         */
-        int mNbEdges;
+        int mNbEdges = 0;
 
         /**
          * The mesh's vertices
@@ -70,6 +65,11 @@ class Mesh{
          * The index of the first triangle
         */
         int mFirstTriIdx = 0;
+
+        /**
+         * Radii for fitmaps
+        */
+        std::vector<float> mRadii;
 
     public:
 
@@ -472,10 +472,8 @@ class Mesh{
     private:
         /**
          * Build a simplify version of the S and M fitmaps for vertices
-         * @param k The number of faces arround the center to check for the BFS
-         * @param r The radius for which we want to find faces in
         */
-        void buildVerticesFitmaps(int k, float r);
+        void buildVerticesFitmaps();
 
         /**
          * Build a simplify version of the S and M fitmaps for faces
@@ -484,10 +482,54 @@ class Mesh{
 
         /**
          * Build the mesh's fitmaps
-         * @param k The number of faces arround the center to check for the BFS
-         * @param r The radius for which we want to find faces in
         */
-        void buildFitmaps(int k, float r);
+        void buildFitmaps();
+
+        /**
+         * Init the radii for fitmaps precomputation
+        */
+        void initRadii();
+
+        /**
+         * Init neighbourhoods
+         * @param v The current vertex
+         * @return The neighbourhood as a matrix of vertices
+        */
+        std::vector<std::vector<mesh::Vertex*>> initNeighbourhood(mesh::Vertex* v) const;
+
+        /**
+         * Init neighbourhoods faces
+         * @param bpis All the vertices neighbourhoods
+         * @return The neighbourhood as a matrix of faces
+        */
+        std::vector<std::vector<mesh::Face*>> initNeighbourhoodFaces(std::vector<std::vector<mesh::Vertex*>> bpis);
+
+
+        /**
+         * Get the fitting error for a neighbourhood and a given plane
+         * @param bpi The current neighbourhood
+         * @param plane The interpolated plane
+         * @return The fitting error as a floating point        
+        */
+        float getFittingError(std::vector<mesh::Vertex*> bpi, maths::Vector3 plane) const;
+
+
+        /**
+         * Fit a quadratic funtion in the dataset of errors
+         * @param errors The fitting errors
+         * @return The quadratic coefficient of the resulting function
+        */
+        float getQuadraticFittingErrors(std::vector<float> errors) const;
+
+        /**
+         * Get the number of faces consistently oriented with the given normal of a plane
+         * @param n The normal of the plane
+         * @param bpiFace The neighbourhood considered
+         * @return The number of faces
+        */
+        int getNbConsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace);
+
+
 
 };
 

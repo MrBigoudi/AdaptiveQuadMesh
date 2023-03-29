@@ -280,6 +280,23 @@ class Vector3{
         glm::vec3 toGlm() const {
             return glm::vec3(mVect[0], mVect[1], mVect[2]);
         }
+
+        /**
+         * Get the normal of a plane defined by three points
+         * @param p1 The first point
+         * @param p2 The second point
+         * @param p3 The third point
+         * @return The normal as a vector
+        */
+        static maths::Vector3* getNormalOfPlane(const Vector3 & p1, const Vector3 & p2, const Vector3 & p3){
+            // get two vectors of the plane
+            Vector3 v1 = p3 - p1;
+            Vector3 v2 = p2 - p1;
+
+            Vector3 normal = cross(v1, v2).normalize();
+
+            return new Vector3(normal);
+        }
 };
 
 };
