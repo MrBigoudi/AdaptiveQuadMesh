@@ -50,3 +50,7 @@ README.pdf
 *.fls
 *.gz
 *.fdb_latexmk
+*.vrb
+*.toc
+*.snm
+*.nav
