@@ -178,20 +178,53 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
             ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
             // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
             // open file dialog when user clicks this button
-            if(ImGui::Button("Load a Mesh"))
+            io.FontGlobalScale = 1.5f;
+            if(ImGui::Button("Load a Mesh")){
                 fileDialog.Open();
-            if(ImGui::Button("Triangular To Quad"))
+            }
+
+            if(ImGui::Button("Triangular To Quad")){
+                printf("\n########## CONVERSION BEGIN ##############\n");
+                // auto start = std::chrono::steady_clock::now();
                 object->toQuadMesh();
+                // auto stop = std::chrono::steady_clock::now();
+                // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+                // printf("\ntime triangular to quad mesh: %f\n", double(duration.count()));
+                printf("\n########## CONVERSION END ##############\n");
+            }
+
+            if(ImGui::Button("Save to file (./bin/objects/tmp.obj)")){
+                printf("\n########## SAVE BEGIN ##############\n");
+                object->toObj("bin/objects/tmp.obj");
+                printf("\n########## SAVE END ##############\n");
+            }
             ImGui::Text("\n\nZoom In: Press W\nZoom Out: Press S\n\n");
             ImGui::Text("Rotate on X axis: Press DOWN / UP\nRotate on Y axis: Press D / A\nRotate on Z axis: Press LEFT / RIGHT\n\n");
             if(ImGui::Button("Wider Lines"))
                 lineWidth += LINE_WIDTH;
             if(ImGui::Button("Smaller Lines"))
                 lineWidth -= LINE_WIDTH;
+
             if(ImGui::Button("Reset")){
                 delete object;
                 object = new scene::Object(DEFAULT_OBJECT);
                 object->initCamera(&camera);
+            }
+            ImGui::InputInt("Number of diagonals to collapse", &object->mNbCollapses);
+            
+            if(ImGui::Button("Diagonal Collapse")){
+                printf("\n########## SIMPLIFICATION BEGIN ##############\n");
+                object->diagonalCollapse(object->mNbCollapses);
+                printf("\n########## SIMPLIFICATION END ##############\n");
+            }
+            if(ImGui::Button("Render S-fitmap")){
+                object->drawSMap();
+            }
+            if(ImGui::Button("Render M-fitmap")){
+                object->drawMMap();
+            }
+            if(ImGui::Button("Render only the faces")){
+                object->drawFaces();
             }
             ImGui::End();
         }
@@ -199,10 +232,12 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
         fileDialog.Display();
         if(fileDialog.HasSelected()){
             // std::cout << "Selected filename" << fileDialog.GetSelected().string() << std::endl;
+            printf("\n########## LOAD BEGIN ##############\n");
             delete object;
             object = new scene::Object(fileDialog.GetSelected().string());
             object->initCamera(&camera);
             fileDialog.ClearSelected();
+            printf("\n########## LOAD END ##############\n");
         }
 
 
@@ -232,21 +267,103 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// void testObject(std::string path){
+//     printf("\n%s:\n", path.c_str());
+//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ(path);
+//     fromObj.checkCorrectness();
+//     fromObj.printStats();
+//     auto start = std::chrono::high_resolution_clock::now();
+//     fromObj.triToQuad();    
+//     auto stop = std::chrono::high_resolution_clock::now();
+//     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//     printf("time tri to quad: %f\n", double(duration.count()));
+//     fromObj.checkCorrectness();
+//     fromObj.printStats();
+// }
+
+
 // int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/armadillo.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/garg.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/triangle.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/cube.obj");
-//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/venus.obj");
+//     // testObject("media/objects/triangle.obj");
+//     // testObject("media/objects/cube.obj");
+//     // testObject("media/objects/chess_piece.obj");
+//     // testObject("media/objects/venus.obj");
+//     // testObject("media/objects/garg.obj");
+//     // testObject("media/objects/bunny.obj");
+//     // testObject("media/objects/armadillo.obj");
+
 //     // fromObj.checkCorrectness();
-//     // fromObj.toObj("media/objects/produced_chess_piece.obj");
-//     // std::printf("nbVertices:%d, nbFaces:%d\n", fromObj.mNbVertices, fromObj.mNbFaces);
-//     // fromObj.print();
-//     // fromObj.printStats();
+//     // for(int k=0; k<10000; k++){
+//     //     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
+//     //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/garg.obj");
+//     //     // auto start = std::chrono::high_resolution_clock::now();
+//     //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
+//     //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunnyQuad.obj");
+//     //     // auto stop = std::chrono::high_resolution_clock::now();
+//     //     // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//     //     // printf("time loading phase: %f\n", double(duration.count()));
+//     //     // std::printf("nbVertices:%d, nbFaces:%d\n", fromObj.mNbVertices, fromObj.mNbFaces);
+//     //     // fromObj.print();
+//     //     // fromObj.printStats();
+//     //     fromObj.checkCorrectness();
+//     //     fromObj.triToQuad();
+//     //     fromObj.checkCorrectness();
+//     //     int nbFacesObjectif = fromObj.mNbFaces >> 1;
+//     //     int i=0;
+//     //     while(fromObj.mNbFaces >= nbFacesObjectif){
+//     //         printf("\ni: %d, obj: %d, cur: %d\n\n", i++, nbFacesObjectif, fromObj.mNbFaces);
+//     //         fromObj.initDiagonals();
+//     //         fromObj.diagonalCollapse();
+//     //         fromObj.clean();
+//     //         fromObj.checkCorrectness();
+//     //     }
+//     //     // fromObj.printStats();
+//     //     // fromObj.print();
+//     //     // fromObj.toObj("bin/objects/tmp.obj");
+//     // }
+
+//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunnyQuad.obj");
+//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
+//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
+//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/armadillo.obj");
 //     fromObj.triToQuad();
-//     // fromObj.printStats();
-//     // fromObj.print();
+//     fromObj.removeDoublets(fromObj.mFaces);
+//     fromObj.clean();
+//     fromObj.checkCorrectness();
+//     fromObj.initDiagonals();
+//     // int nbCollapses = fromObj.mNbFaces >> 1;
+//     int nbCollapses = 10000;    
+//     // int begNbFaces = fromObj.mNbFaces;
+//     // int targetNbFaces = 10000;
+//     // int nbCollapses = begNbFaces-targetNbFaces;
+//     for(int i=1; i<=nbCollapses; i++){
+//         printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
+//         auto start = std::chrono::high_resolution_clock::now();
+//         while(!fromObj.diagonalCollapse());
+//         auto stop = std::chrono::high_resolution_clock::now();
+//         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+//         printf("time diagonal collapse: %f\n", double(duration.count()));
+//         // fromObj.clean();
+//         // fromObj.checkCorrectness(); 
+//     }
+//     fromObj.clean();
+//     fromObj.checkCorrectness(); 
+//     fromObj.printStats();
 //     fromObj.toObj("bin/objects/tmp.obj");
+
 //     exit(EXIT_SUCCESS);
 // }

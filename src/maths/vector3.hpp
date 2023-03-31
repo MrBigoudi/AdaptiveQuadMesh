@@ -154,6 +154,8 @@ class Vector3{
     public: // VECTORS OPERATIONS
         /**
          * Vector addition
+         * @param v The second vector
+         * @return The new vector
         */
         Vector3 operator + (const Vector3 & v) const{
             return * new Vector3(x() + v.x(), y() + v.y(), z() + v.z());
@@ -161,6 +163,8 @@ class Vector3{
 
         /**
          * Vector substraction
+         * @param v The second vector
+         * @return The new vector
         */
         Vector3 operator - (const Vector3 & v) const{
             return * new Vector3(x() - v.x(), y() - v.y(), z() - v.z());
@@ -168,6 +172,8 @@ class Vector3{
 
         /**
          * Vector scalar multiplication
+         * @param f The constant
+         * @return The new vector
         */
         Vector3 operator * (const float & f) const{
             return * new Vector3(x()*f, y()*f, z()*f);
@@ -175,6 +181,8 @@ class Vector3{
 
         /**
          * Vector multiplication
+         * @param v The second vector
+         * @return The new vector
         */
         Vector3 operator * (const Vector3 & v) const{
             return * new Vector3(x()*v.x(), y()*v.y(), z()*v.z());
@@ -182,6 +190,8 @@ class Vector3{
 
         /**
          * Vector scalar division
+         * @param f The constant
+         * @return The new vector
         */
         Vector3 operator / (const float & f) const{
             return * new Vector3(x()/f, y()/f, z()/f);
@@ -189,6 +199,8 @@ class Vector3{
 
         /**
          * Vector division
+         * @param v The second vector
+         * @return The new vector
         */
         Vector3 operator / (const Vector3 & v) const{
             return * new Vector3(x()/v.x(), y()/v.y(), z()/v.z());
@@ -249,18 +261,6 @@ class Vector3{
                         + (v1.z()-v2.z())*(v1.z()-v2.z()));
         };
 
-
-        /**
-         * Printer for the vector
-        */
-        friend std::ostream& operator <<(std::ostream &out , const Vector3 & v){
-            if(v.mType == COLOR)
-                out << "r: " << v.mVect[0] << ", g: " << v.mVect[1] << ", b: " << v.mVect[2];
-            else
-                out << "x: " << v.mVect[0] << ", y: " << v.mVect[1] << ", z: " << v.mVect[2]; 
-            return out; 
-        };
-
         /**
          * Cast a vector into a printable string
          * @return The vector as a string
@@ -276,9 +276,27 @@ class Vector3{
 
         /**
          * Cast a vector into a glm vector
+         * @return The vector as a glm::vec3
         */
         glm::vec3 toGlm() const {
             return glm::vec3(mVect[0], mVect[1], mVect[2]);
+        }
+
+        /**
+         * Get the normal of a plane defined by three points
+         * @param p1 The first point
+         * @param p2 The second point
+         * @param p3 The third point
+         * @return The normal as a vector
+        */
+        static maths::Vector3* getNormalOfPlane(const Vector3 & p1, const Vector3 & p2, const Vector3 & p3){
+            // get two vectors of the plane
+            Vector3 v1 = p3 - p1;
+            Vector3 v2 = p2 - p1;
+
+            Vector3 normal = cross(v1, v2).normalize();
+
+            return new Vector3(normal);
         }
 };
 

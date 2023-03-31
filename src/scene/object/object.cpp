@@ -45,15 +45,15 @@ scene::Object::~Object(){
 
 void scene::Object::toQuadMesh(){
     if(mIsQuad) return;
-    printf("\n\n###################### Begin Triangular Mesh to Quad Mesh transformation ######################\n\n");
+    // printf("\n\n###################### Begin Triangular Mesh to Quad Mesh transformation ######################\n\n");
     mMesh->triToQuad();
-    toObj("bin/objects/tmp.obj");
+    // toObj("bin/objects/tmp.obj");
     mTrans = glm::mat4(1.0f);
     initVerticesAndIndices();
     initDim();
     initVao();
     mIsQuad = true;
-    printf("\n\n###################### Done Triangular Mesh to Quad Mesh transformation ###################\n\n");
+    // printf("\n\n###################### Done Triangular Mesh to Quad Mesh transformation ###################\n\n");
 }
 
 
@@ -80,6 +80,8 @@ void scene::Object::initVerticesAndIndices(){
         mVertices.push_back(curVec.x);
         mVertices.push_back(curVec.y);
         mVertices.push_back(curVec.z);
+        mVertices.push_back(mMesh->mVertices[i]->mSFitmap);
+        mVertices.push_back(mMesh->mVertices[i]->mMFitmap);
     }
 
     // init the indices
@@ -140,8 +142,11 @@ void scene::Object::initVao(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEbo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, nbIndices()*sizeof(unsigned int), indices, GL_STATIC_DRAW);
     // set the vertex attrib pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // for smap and mmap
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // bind vao for lines
     glBindVertexArray(mVaoLines);
@@ -152,8 +157,11 @@ void scene::Object::initVao(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mEboLines);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, nbLinesIndices()*sizeof(unsigned int), indicesLines, GL_STATIC_DRAW);
     // set the vertex attrib pointers
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3*sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    // for smap and mmap
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5*sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // unbind vao
     glBindVertexArray(0);
@@ -174,7 +182,11 @@ void scene::Object::draw(std::string shaderName, glm::mat4 model, glm::mat4 view
 
         glBindVertexArray(mVao);
         // draw faces
+        shader->setBool("sFitMap", mDrawSMap);
+        shader->setBool("mFitMap", mDrawMMap);
         glDrawElements(GL_TRIANGLES, nbIndices(), GL_UNSIGNED_INT, 0);
+        shader->setBool("sFitMap", false);
+        shader->setBool("mFitMap", false);
 
         // draw lines
         glBindVertexArray(mVaoLines);
@@ -222,4 +234,44 @@ void scene::Object::initCamera(scene::Camera* camera) const {
                                         2.0f*mDepth);
     camera->mZmax = 500.0f;
     // printf("camera: %s\n", camera->mPosition.toString().c_str());
+}
+
+void scene::Object::diagonalCollapse(int nb){
+    if(!mDiagInit) {
+        mMesh->initDiagonals();
+        mDiagInit = true;
+    }
+
+    int nbCollapses = nb <= mMesh->mNbFaces >> 1 ? nb : mMesh->mNbFaces >> 1;
+
+    for(int i=1; i<=nbCollapses; i++){
+        // printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
+        // auto start = std::chrono::high_resolution_clock::now();
+        while(!mMesh->diagonalCollapse());
+        // auto stop = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        // printf("time diagonal collapse: %f\n", double(duration.count()));
+        // fromObj.clean();
+        // fromObj.checkCorrectness(); 
+    }
+
+    mMesh->clean();
+    initVerticesAndIndices();
+    initDim();
+    initVao();
+}
+
+void scene::Object::drawSMap(){
+    mDrawSMap = true;
+    mDrawMMap = false;
+}
+
+void scene::Object::drawMMap(){
+    mDrawMMap = true;
+    mDrawSMap = false;
+}
+
+void scene::Object::drawFaces(){
+    mDrawMMap = false;
+    mDrawSMap = false;
 }

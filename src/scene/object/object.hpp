@@ -40,9 +40,29 @@ class Object{
         mesh::Mesh* mMesh;
 
         /**
-         * The vao, vbo and ebo
+         * The vertex array object for the faces
         */
-        GLuint mVao, mVbo, mEbo, mVaoLines, mEboLines;
+        GLuint mVao;
+
+        /**
+         * The vertex buffer object for the faces
+        */
+        GLuint mVbo;
+
+        /**
+         * The element buffer object for the faces
+        */
+        GLuint mEbo;
+
+        /**
+         * The vertex array object for the edges
+        */
+        GLuint mVaoLines;
+
+        /**
+         * The element buffer object for the edges
+        */
+        GLuint mEboLines;
 
         /**
          * The transformation matrix
@@ -50,9 +70,49 @@ class Object{
         glm::mat4 mTrans;
 
         /**
-         * The dimensions of the object
+         * The object's height
         */
-        float mHeight, mWidth, mDepth, mMinHeight, mMinWidth, mMinDepth, mMaxHeight, mMaxWidth, mMaxDepth;
+        float mHeight;
+        
+        /**
+         * The object's width
+        */
+        float mWidth; 
+        
+        /**
+         * The object's depth
+        */
+        float mDepth;
+        
+        /**
+         * The object's minimum height
+        */
+        float mMinHeight; 
+        
+        /**
+         * The object's minimum width
+        */
+        float mMinWidth; 
+        
+        /**
+         * The object's minimum depth
+        */
+        float mMinDepth; 
+        
+        /**
+         * The object's maximum height
+        */
+        float mMaxHeight; 
+        
+        /**
+         * The object's maximum width
+        */
+        float mMaxWidth; 
+        
+        /**
+         * The object's maximum depth
+        */
+        float mMaxDepth;
 
         /**
          * Tells if the object has already been transformed
@@ -60,10 +120,24 @@ class Object{
         bool mIsQuad = false;
 
         /**
-         * Init a camera's position
-         * @param camera The camera to update
+         * Tells if the diagonal heap has been initialized
         */
-        void initCamera(scene::Camera* camera) const;
+        bool mDiagInit = false;
+
+        /**
+         * Flag to know if we should draw the S fitmap 
+        */
+        bool mDrawSMap = false;
+        
+        /**
+         * Flag to know if we should draw the M fitmap 
+        */
+        bool mDrawMMap = false;
+
+        /**
+         * The number of diagonals to collapse
+        */
+        int mNbCollapses = 0;
 
 
     public:
@@ -145,6 +219,33 @@ class Object{
          * @param linesWidth The lines' width
         */
         void draw(std::string shaderName, glm::mat4 model, glm::mat4 view, glm::mat4 proj, float linesWidth) const;
+        
+        /**
+         * Init a camera's position
+         * @param camera The camera to update
+        */
+        void initCamera(scene::Camera* camera) const;
+
+        /**
+         * Do a diagonal collapse
+         * @param nb The number of diagonal we want to collapse
+        */
+        void diagonalCollapse(int nb);
+
+        /**
+         * Draw the S-fitmap
+        */
+        void drawSMap();
+
+        /**
+         * Draw the M-fitmap
+        */
+        void drawMMap();
+
+        /**
+         * Draw only the faces
+        */
+        void drawFaces();
 
     private:
         /**

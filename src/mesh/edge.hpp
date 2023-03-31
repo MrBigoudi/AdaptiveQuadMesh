@@ -18,7 +18,7 @@ enum EdgePos {LCW, LCCW, RCW, RCCW, NONE};
 */
 class Edge{
 
-    private:
+    public:
         /**
          * The id counter
         */
@@ -89,7 +89,15 @@ class Edge{
     public:
         /**
          * A basic constructor
-         * @param 
+         * @param vOrigin The origin vertex
+         * @param vDest The destination vertex
+         * @param faceL The left face
+         * @param faceR The right face
+         * @param edgeLCW The left clock wise edge
+         * @param edgeLCCW The left counter clock wise edge
+         * @param edgeRCW The right clock wise edge
+         * @param edgeRCCW The right counter clock wise edge
+         * @param reversed The reversed edge
         */
         Edge(mesh::Vertex* vOrigin = nullptr, mesh::Vertex* vDest = nullptr, mesh::Face* faceL = nullptr, mesh::Face* faceR = nullptr, 
                 mesh::Edge* edgeLCW = nullptr, mesh::Edge* edgeLCCW = nullptr, mesh::Edge* edgeRCW = nullptr, mesh::Edge* edgeRCCW = nullptr, 
@@ -136,10 +144,10 @@ class Edge{
 
         /**
          * Get the sum of pairwise dot products of edges surrounding a face
-         * @param face A list of chained edges surrounding a face 
+         * @param vertexList A list of vertices surrounding a face 
          * @return The sum of the dot products
         */
-        static float getSumPairwiseDotProd(std::vector<mesh::Edge*> edgeList);
+        static float getSumPairwiseDotProd(std::vector<mesh::Vertex*> vertexList);
 
         /**
          * Get the perimeter of edges surrounding a face
@@ -165,12 +173,12 @@ class Edge{
          * Cast an edge into a printable string
          * @return The edge as a string
         */
-        std::string toString();
+        std::string toString() const;
 
         /**
          * Print an edge
         */
-        void print();
+        void print() const;
 
         /**
          * Get the list of all reversed edges of a given list of edges
@@ -197,6 +205,18 @@ class Edge{
          * @return True if the first edge is lesser than the second one
         */
         static bool cmp(const mesh::Edge &e1, const mesh::Edge &e2);
+
+        /**
+         * Merge two edges
+         * @param e2 The second edge
+        */
+        void mergeEdge(mesh::Edge* e2);
+
+        /**
+         * Check if the neighbours are correct
+         * @return True if the neighbours are correct
+        */
+        bool check() const;
 
     private:
         /**

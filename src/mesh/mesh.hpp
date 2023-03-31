@@ -19,21 +19,32 @@ class Edge;
 */
 class Mesh{
 
+    private:
+        /**
+         * Maximum radii id
+        */
+        static int H_FITMAP; 
+        
+        /**
+         * Tolerance for M fitmap calculation
+        */
+        static float THO_FITMAP;
+
     public:
         /**
          *  The number of vertices in the mesh
         */
-        int mNbVertices;
+        int mNbVertices = 0;
 
         /**
          * The number of faces in the mesh
         */
-        int mNbFaces;
+        int mNbFaces = 0;
 
         /**
          * The number of edges in the mesh
         */
-        int mNbEdges;
+        int mNbEdges = 0;
 
         /**
          * The mesh's vertices
@@ -49,6 +60,21 @@ class Mesh{
          * The mesh's edges
         */
         std::vector<mesh::Edge*> mEdges;
+
+        /**
+         * A heap of diagonals
+        */
+        std::vector<mesh::Diagonal*> mDiagHeap;
+
+        /**
+         * The index of the first triangle
+        */
+        int mFirstTriIdx = 0;
+
+        /**
+         * Radii for fitmaps
+        */
+        std::vector<float> mRadii;
 
     public:
 
@@ -139,46 +165,55 @@ class Mesh{
 
         /**
          * Get the minimum height of one of the object's vertices
+         * @return The minimum height as a floating point
         */
         float getMinHeight() const;
 
         /**
          * Get the maximum height of one of the object's vertices
+         * @return The maximum height as a floating point
         */
         float getMaxHeight() const;
 
         /**
          * Get the minimum width of one of the object's vertices
+         * @return The minimum width as a floating point
         */
         float getMinWidth() const;
 
         /**
          * Get the maximum width of one of the object's vertices
+         * @return The maximum width as a floating point
         */
         float getMaxWidth() const;
 
         /**
          * Get the minimum depth of one of the object's vertices
+         * @return The minimum depth as a floating point
         */
         float getMinDepth() const;
 
         /**
          * Get the maximum depth of one of the object's vertices
+         * @return The maximum depth as a floating point
         */
         float getMaxDepth() const;
 
         /**
          * Get the height of the object
+         * @return The mesh's height as a floating point
         */
         float getHeight() const;
 
         /**
          * Get the width of the object
+         * @return The mesh's width as a floating point
         */
         float getWidth() const;
 
         /**
          * Get the depth of the object
+         * @return The mesh's depth as a floating point
         */
         float getDepth() const;
 
@@ -221,16 +256,43 @@ class Mesh{
         void removeEdge(mesh::Edge* edge);
 
         /**
+         * Remove an edge (without removing it from the list but flagging it)
+         * @param edge The edge to be removed from the mesh
+        */
+        void removeEdgeV2(mesh::Edge* edge);
+
+        /**
          * Remove a face from the list
          * @param face The face to remove
         */
         void removeFaceFromList(mesh::Face* face);
 
         /**
+         * Remove flagged faces from the list
+        */
+        void removeFacesFromList();
+
+        /**
          * Remove an edge from the list
          * @param edge The edge to remove
         */
         void removeEdgeFromList(mesh::Edge* edge);
+
+        /**
+         * Remove flagged edges from the list
+        */
+        void removeEdgesFromList();
+
+        /**
+         * Remove a vertex from the list
+         * @param vertex The vertex to remove
+        */
+        void removeVertexFromList(mesh::Vertex* vertex);
+
+        /**
+         * Remove flagged vertices from the list
+        */
+        void removeVerticesFromList();
 
         // /**
         //  * Get the list of triangle faces from the mesh
@@ -242,7 +304,7 @@ class Mesh{
          * Get one of the remaining triangles in the mesh
          * @return The face of the triangle (nullptr if there are no triangles left)
         */
-        mesh::Face* getTriangle() const;
+        mesh::Face* getTriangle();
 
         /**
          * Count the number of triangles in the mesh
@@ -257,7 +319,7 @@ class Mesh{
 
         /**
          * Get the path of faces to reach the closest triangle using a BFS
-         * @param triOrigin The triangle from where to start
+         * @param triangle The triangle from where to start
          * @return The path as a list of faces (assert false if triOrigin is the last triangle)
         */
         std::vector<mesh::Face*> pathToClosestTriangle(mesh::Face* triangle) const;
@@ -378,6 +440,112 @@ class Mesh{
         //  * @param triangle The triangle to remove
         // */
         // void triToQuadRemoveOldTriangle(mesh::Face* triangle);
+
+    public:
+        /**
+         * Init the faces' diagonals and the heap
+        */
+        void initDiagonals();
+
+        /**
+         * Collapse diagonal
+         * @return UPDATE if a diagonal was collapsed, NO_UPDATE otherwise and EMPTY_HEAP if the heap is empty
+        */
+        int diagonalCollapse();
+
+        /**
+         * Clean the mesh
+        */
+        void clean();
+
+        /**
+         * Update the diagonal heap
+         * @param faces The faces to update
+        */
+        void updateDiagonals(std::vector<mesh::Face*> faces);
+
+    private:
+        /**
+         * Remove a doublet
+         * @param e1 The first edge of the doublet
+         * @param e2 The second edge of the doublet
+        */
+        void removeDoublet(mesh::Edge* e1, mesh::Edge* e2);
+
+    public:
+        /**
+         * Remove doublets
+         * @param faces The list of faces that can possibly have doublets
+        */
+        void removeDoublets(std::vector<mesh::Face*> faces);
+
+        /**
+         * Remove a singlet
+         * @param face The face to remove
+        */
+        void removeSinglet(mesh::Face* face);
+
+    private:
+        /**
+         * Build a simplify version of the S and M fitmaps for vertices
+        */
+        void buildVerticesFitmaps();
+
+        /**
+         * Build a simplify version of the S and M fitmaps for faces
+        */
+        void buildFacesFitmaps();
+
+        /**
+         * Build the mesh's fitmaps
+        */
+        void buildFitmaps();
+
+        /**
+         * Init the radii for fitmaps precomputation
+        */
+        void initRadii();
+
+        /**
+         * Init neighbourhoods
+         * @param v The current vertex
+         * @return The neighbourhood as a matrix of vertices
+        */
+        std::vector<std::vector<mesh::Vertex*>> initNeighbourhood(mesh::Vertex* v) const;
+
+        /**
+         * Init neighbourhoods faces
+         * @param bpis All the vertices neighbourhoods
+         * @return The neighbourhood as a matrix of faces
+        */
+        std::vector<std::vector<mesh::Face*>> initNeighbourhoodFaces(std::vector<std::vector<mesh::Vertex*>> bpis);
+
+
+        /**
+         * Get the fitting error for a neighbourhood and a given plane
+         * @param bpi The current neighbourhood
+         * @param plane The interpolated plane
+         * @return The fitting error as a floating point        
+        */
+        float getFittingError(std::vector<mesh::Vertex*> bpi, maths::Vector3 plane) const;
+
+
+        /**
+         * Fit a quadratic funtion in the dataset of errors
+         * @param errors The fitting errors
+         * @return The quadratic coefficient of the resulting function
+        */
+        float getQuadraticFittingErrors(std::vector<float> errors) const;
+
+        /**
+         * Get the number of faces inconsistently oriented with the given normal of a plane
+         * @param n The normal of the plane
+         * @param bpiFace The neighbourhood considered
+         * @return The number of faces
+        */
+        int getNbInconsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace);
+
+
 
 };
 

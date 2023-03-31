@@ -14,7 +14,7 @@ class Face;
 */
 class Vertex{
 
-    private:
+    public:
         /**
          * The id counter
         */
@@ -41,6 +41,26 @@ class Vertex{
         */
         bool mToDelete = false;
 
+        /**
+         * The S Fitmap
+        */
+        float mSFitmap = 0.0f;
+        
+        /**
+         * The M fitmap
+        */
+        float mMFitmap = 0.0f;
+
+        /**
+         * The list of neighbour vertices (at initialization)
+        */
+        std::vector<mesh::Vertex*> mNeighbours;
+
+        /**
+         * The list of neighbour faces (at initialization)
+        */
+        std::vector<mesh::Face*> mNeighboursFaces;
+
     public:
         /**
          * A basic constructor
@@ -56,10 +76,11 @@ class Vertex{
          * Cast a vertex into a printable string
          * @return The vertex as a string
         */
-        std::string toString();
+        std::string toString() const ;
 
         /**
          * Cast a list of vertices into a printable string
+         * @param list The list of vertices to cast into a string
          * @return The vertices as a string
         */
         static std::string listToString(std::vector<mesh::Vertex*> list);
@@ -67,7 +88,7 @@ class Vertex{
         /**
          * Print a vertex
         */
-        void print();
+        void print() const;
 
         /**
          * Get a common vertices between two faces
@@ -125,6 +146,71 @@ class Vertex{
          * @return The vertex as a glm vector
         */
         glm::vec3 toGlm() const;
+
+        /**
+         * Get the faces arround a vertex
+         * @return The list of faces arround the vertex
+        */
+        std::vector<mesh::Face*> getSurroundingFaces() const;
+
+        /**
+         * Get the vertices arround a vertex at a distance at most k from it
+         * @param k The max distance between vertices in the resulting list and the current one
+         * @return The list of vertices arround the vertex
+        */
+        std::vector<mesh::Vertex*> getSurroundingVertices(int k) const;
+
+        /**
+         * Get the edges arround a vertex
+         * @return The list of edges arround the vertex
+        */
+        std::vector<mesh::Edge*> getSurroundingEdges() const;
+
+        /**
+         * Update vertices of a given edge list
+         * @param v2 The vertex we want to remove
+         * @param edges The list of edges to update
+        */
+        void mergeVertices(mesh::Vertex* v2, std::vector<mesh::Edge*> edges);
+
+        /**
+         * Get the distance between two vertices
+         * @param v2 The vertex we want the distance to
+         * @return The distance as a floating point
+        */
+        float getDistance(mesh::Vertex* v2) const;
+
+        /**
+         * Get the number of vertices from a given list that are at a maximum distance of a given value from the current vertex
+         * @param vertices The vertices we want to compare
+         * @param r The radius to accept vertices
+         * @return The vertices in the range as a vector
+        */
+        std::vector<mesh::Vertex*> getVerticesInRadius(std::vector<mesh::Vertex*> vertices, float r) const;
+
+        /**
+         * Get teh average length of edges surrounding a given list of vertices
+         * @param vertices The list of vertices
+         * @return The average length as a floating point
+        */
+		static float getAverageEdgeLength(std::vector<mesh::Vertex*> vertices);
+
+        /**
+         * Get the plane creted from interpolation of the given vertices
+         * @param vertices The vertices to interpolate as a plane
+         * @return The plane a, b, and c values in a vector3
+        */
+		static maths::Vector3* getInterpolatedPlane(std::vector<mesh::Vertex*> vertices);
+
+        /**
+         * Get the dot products between a given normal and a list of vertices
+         * @param normal The normal of a certain plane
+         * @param vertices The vertices we want to get the dot product with
+         * @return A list of floating point values
+        */
+        static std::vector<float> getSquaredDotProducts(maths::Vector3 normal, std::vector<mesh::Vertex*> vertices);
+
+
 };
 
 }

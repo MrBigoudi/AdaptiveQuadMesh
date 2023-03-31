@@ -37,3 +37,16 @@ bin/
 produced*.obj
 media/objects/common*
 imgui.ini
+*.tmp
+README.pdf
+
+# tex files
+*.tex
+*.log
+*.aux
+*.bib
+*.bbl
+*.blg
+*.fls
+*.gz
+*.fdb_latexmk

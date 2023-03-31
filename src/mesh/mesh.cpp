@@ -7,11 +7,16 @@
 #include <vector>
 #include <queue>
 #include <map>
+#include <chrono>
 
 #include "edge.hpp"
 #include "face.hpp"
 #include "mesh.hpp"
 #include "vector3.hpp"
+#include "utils.hpp"
+
+int mesh::Mesh::H_FITMAP = 8;
+float mesh::Mesh::THO_FITMAP = 0.05f;
 
 void mesh::Mesh::checkCorrectness() const {
 	// printf("\nBeg check correctness\n");
@@ -25,18 +30,31 @@ void mesh::Mesh::checkCorrectness() const {
 	// turn arround every faces
 	// printf("\nBeg check faces\n");
 	for(int i=0; i<mNbFaces; i++){
+		// mFaces[i]->print();
+		assert(!mFaces[i]->mToDelete);
+		assert(!mFaces[i]->mEdge->mToDelete);
 		surEdges = mFaces[i]->getSurroundingEdges();
 		assert(!mesh::Edge::hasDoubles(surEdges));
+		assert(!mFaces[i]->isSinglet());
+		assert(mFaces[i]->isDoublet().size() == 0);
 	}
 	// printf("End check faces\n");
 
 	// turn arround every edges
 	// printf("\nBeg check edges\n");
 	for(int i=0; i<mNbEdges; i++){
+		assert(!mEdges[i]->mToDelete);
+		assert(!mEdges[i]->mEdgeLeftCCW->mToDelete);
+		assert(!mEdges[i]->mEdgeLeftCW->mToDelete);
+		assert(!mEdges[i]->mEdgeRightCW->mToDelete);
+		assert(!mEdges[i]->mEdgeRightCCW->mToDelete);
+		assert(!mEdges[i]->mReverseEdge->mToDelete);
 		surEdges = mEdges[i]->mFaceLeft->getSurroundingEdges();
 		assert(!mesh::Edge::hasDoubles(surEdges));
 		surEdges = mEdges[i]->mFaceRight->getSurroundingEdges();
 		assert(!mesh::Edge::hasDoubles(surEdges));
+		// mEdges[i]->print();
+		// assert(mEdges[i]->check());
 	}
 	// printf("End check edges\n");
 
@@ -44,6 +62,8 @@ void mesh::Mesh::checkCorrectness() const {
 	// turn arround every vertices
 	// printf("\nBeg check vertices\n");
 	for(int i=0; i<mNbVertices; i++){
+		assert(!mVertices[i]->mToDelete);
+		assert(!mVertices[i]->mEdge->mToDelete);
 		surEdges = mVertices[i]->mEdge->mFaceLeft->getSurroundingEdges();
 		assert(!mesh::Edge::hasDoubles(surEdges));
 		surEdges = mVertices[i]->mEdge->mFaceRight->getSurroundingEdges();
@@ -117,14 +137,14 @@ std::vector<std::string> mesh::Mesh::toString() const{
 }
 
 void mesh::Mesh::printStats() const{
-	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+	fprintf(stdout, "Mesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
 }
 
 
 void mesh::Mesh::print() const{
 	std::vector<std::string> strings = toString();
 
-	fprintf(stdout, "\n\nMesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
+	fprintf(stdout, "Mesh: nbVert=%d, nbFaces=%d, nbEdges=%d\n", mNbVertices, mNbFaces, mNbEdges);
 
 	fprintf(stdout, "\n\nVertices:\n");
 	for (int i=0; i<mNbVertices; i++){
@@ -143,6 +163,11 @@ void mesh::Mesh::print() const{
 }
 
 mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
+	// init index counters
+	mesh::Vertex::ID_CPT = 0;
+	mesh::Face::ID_CPT = 0;
+	mesh::Edge::ID_CPT = 0;
+
 	std::vector<maths::Vector3*> vertices;
 	std::vector<std::vector<int>> faces;
 	
@@ -198,8 +223,16 @@ mesh::Mesh mesh::Mesh::loadOBJ(std::string file){
 			continue;
 	}
 
+	mesh::Mesh mesh = mesh::Mesh::objToMesh(vertices, faces);
+
+	// auto start = std::chrono::high_resolution_clock::now();
+	mesh.buildFitmaps();
+	// auto stop = std::chrono::high_resolution_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("time build fitmaps: %f\n", double(duration.count()));
+
 	// convert the mesh to winged-edge form
-	return mesh::Mesh::objToMesh(vertices, faces);
+	return mesh;
 }
 
 
@@ -212,17 +245,23 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 
 	// create mesh::Edge and save to edge
     std::vector<mesh::Edge*> edgeList;
-	int nbEdges = int(faces.size()*3);
-	for (int i = 0; i < nbEdges; i++)
-		edgeList.push_back(new mesh::Edge());
+	int vnum = faces[0].size();
+	int nbEdges = int(faces.size()*vnum);
+	for (int i = 0; i < nbEdges; i++){
+		mesh::Edge* newEdge = new mesh::Edge();
+		edgeList.push_back(newEdge);
+	}
 
 	// create mesh::Face and save to face
     std::vector<mesh::Face*> faceList;
 	int nbFaces = int(faces.size());
-	for (int i = 0; i < nbFaces; i++)
+	for (int i = 0; i < nbFaces; i++){
 		faceList.push_back(new mesh::Face());
+		if(vnum > 3){
+			faceList.back()->mIsTriangle = false;
+		}
+	}
 
-	int vnum = faces[0].size();
 
 	// use edgetable to record indices of start and end vertex, edge index
 	int m = vertices.size();
@@ -234,6 +273,8 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 	for (int i = 0; i < int(faces.size()); i++) {
 		mesh::Face* f = faceList[i];
 		
+		std::vector<maths::Vector3*> pointsOfPlane;
+
 		for (int v = 0; v < vnum; v++) {
 			int v0 = faces[i][v];
 			int v1 = faces[i][(v+1)%vnum];
@@ -250,6 +291,12 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 
 			vStart = vertexList[v0];
 			vEnd = vertexList[v1];
+			// update vertices neighbours
+			vStart->mNeighbours.push_back(vEnd);
+			vStart->mNeighboursFaces.push_back(f);
+
+			pointsOfPlane.push_back(vStart->mCoords);
+
 			eCur = edgeList[idx];
 
 			eCur->mVertexOrigin = vStart;
@@ -268,6 +315,10 @@ mesh::Mesh mesh::Mesh::objToMesh(std::vector<maths::Vector3*> &vertices, std::ve
 			f->mEdge = eCur;
 			vStart->mEdge = eCur;
 		}
+
+		// create the normal
+		f->mNormal = maths::Vector3::getNormalOfPlane(pointsOfPlane[0], pointsOfPlane[1], pointsOfPlane[2]);
+
 	}
 
 	// save left according to the table
@@ -351,8 +402,8 @@ void mesh::Mesh::triToQuadRemovalMarkingPhase(){
 	std::vector<mesh::Edge*> candidateEdges;
 	for (int i=0; i<int(mFaces.size()); i++){
 		mesh::Edge* edgeToRemove = nullptr;
-		float maxSquared = -1.0f;
-		float maxLength = -1.0f;
+		float minSquared = INFINITY;
+		float maxLength = -INFINITY;
 
 		// for all edges surrounding the face
 		std::vector<mesh::Edge*> surEdges = mFaces[i]->getSurroundingEdges();
@@ -360,25 +411,25 @@ void mesh::Mesh::triToQuadRemovalMarkingPhase(){
 		for (int j=0; j<int(surEdges.size()); j++){
 			mesh::Edge* curEdge = surEdges[j];
 			// get the sum of pairwised dot product
-			std::vector<mesh::Edge*> newQuadEdges = {
-				curEdge->mEdgeLeftCW,
-				curEdge->mEdgeLeftCCW->mReverseEdge,
-				curEdge->mEdgeRightCCW,
-				curEdge->mEdgeRightCW->mReverseEdge
+			std::vector<mesh::Vertex*> newQuadVertices = {
+				curEdge->mEdgeLeftCW->mVertexOrigin,
+				curEdge->mVertexDestination,
+				curEdge->mEdgeRightCW->mVertexDestination,
+				curEdge->mVertexOrigin
 			};
-			float sumDotProd = mesh::Edge::getSumPairwiseDotProd(newQuadEdges);
+			float sumDotProd = mesh::Edge::getSumPairwiseDotProd(newQuadVertices);
 			float length = curEdge->getLength();
 			// update max sum
-			if(sumDotProd >= maxSquared){
-				if(sumDotProd > maxSquared || length >= maxLength){
-					maxSquared = sumDotProd;
+			if(sumDotProd <= minSquared){
+				if(sumDotProd < minSquared || length > maxLength){
+					minSquared = sumDotProd;
 					maxLength = length;
 					edgeToRemove = curEdge;
 				}
 			}
 		}
 
-		edgeToRemove->mSumDotProd = maxSquared;
+		edgeToRemove->mSumDotProd = minSquared;
 		candidateEdges.push_back(edgeToRemove);
 	}
 
@@ -403,6 +454,17 @@ void mesh::Mesh::removeFaceFromList(mesh::Face* face){
 			mFaces.erase(mFaces.begin()+i);
 			mNbFaces--;
 			delete(face);
+			return;
+		}
+	}
+}
+
+void mesh::Mesh::removeVertexFromList(mesh::Vertex* vertex){
+	for(int i = 0; i<int(mVertices.size()); i++){
+		if(mVertices[i]->mId == vertex->mId){
+			mVertices.erase(mVertices.begin()+i);
+			mNbVertices--;
+			delete(vertex);
 			return;
 		}
 	}
@@ -444,22 +506,17 @@ void mesh::Mesh::removeEdge(mesh::Edge* edge){
 		if(rightFace->mEdge->mId == edge->mId)
 			rightFace->mEdge = edge->mEdgeRightCW;
 
-		// fusioning faces
-		mesh::Face* newFace = rightFace->mergeFace(leftFace);
+		// merge faces
+		rightFace->mergeFace(leftFace);
 		// edge->print();
 
 		// deleting the faces from the list
 		removeFaceFromList(leftFace);
 		// edge->print();
-		removeFaceFromList(rightFace);
-		// edge->print();
-
-		// adding the new face to the list
-		mFaces.push_back(newFace);
-		mNbFaces++;
 	}
 
 	// fixing edges
+	// edge->print();
 	edge->updateAllNeighbours();
 	removeEdgeFromList(edge);
 }
@@ -488,8 +545,11 @@ void mesh::Mesh::removeMarkedEdges(){
 	while(edgeList.size() != 0){
 		mesh::Edge* edgeTmp = edgeList.back();
 		edgeList.pop_back();
-		removeEdge(edgeTmp);
+		removeEdgeV2(edgeTmp);
 	}
+
+	// remove marked edges from the list
+	// removeEdgesFromList();
 	// print();
 }
 
@@ -497,29 +557,28 @@ void mesh::Mesh::removeMarkedEdges(){
 void mesh::Mesh::triToQuad(){
 	// print();
 	triToQuadRemovalMarkingPhase();
-	printStats();
-	// printf("\nEdgesToDelete: %d", int(getAllEdgesToDelete().size()));
-	// checkCorrectness();
-	// print();
+	// printStats();
 	removeMarkedEdges();
-	printStats();
+	clean();
+	// printStats();
 	// checkCorrectness();
-	// print();
-	assert(getAllEdgesToDelete().size() == 0);
 
 	// subdivide all remaining triangles
-	assert(howManyTriangles() % 2 == 0);
-
 	triToPureQuad();
-	printStats();
+	// removeDoublets(mFaces);
+	clean();
+	// printStats();
 	assert(howManyTriangles() == 0);
 
 	// print();
 }
 
-mesh::Face* mesh::Mesh::getTriangle() const {
-	for(int i=0; i<mNbFaces; i++){
-		if(mFaces[i]->isTriangle()) return mFaces[i];
+mesh::Face* mesh::Mesh::getTriangle() {
+	for(int i=mFirstTriIdx; i<mNbFaces; i++){
+		if(mFaces[i]->isTriangle()){
+			mFirstTriIdx = i;
+			return mFaces[i];
+		}
 	}
 	return nullptr;
 }
@@ -628,7 +687,7 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 	assert(edgeRev->mEdgeLeftCW);
 
 	// remove old face from list
-	removeFaceFromList(face);
+	face->mToDelete = true;
 
 	// add new elements to list
 	mFaces.push_back(halfFace1);
@@ -659,9 +718,8 @@ void mesh::Mesh::createEdge(mesh::Face* face, mesh::Vertex* v1, mesh::Vertex* v2
 }
 
 std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle) const {
-	const int VISITED = 2;
-	const int ONGOING = 1;
-	const int UNVISITED = 0;
+	const int VISITED = 1;
+	const int ONGOING = 0;
 
 	// the path between the two triangles
 	std::vector<mesh::Face*> path;
@@ -670,12 +728,6 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 	std::map<int, int> status;
 	// initiate a dictionary containing the face's id as keys and the parent in the search as value
 	std::map<int, mesh::Face*> parents;
-	// assert(mNbFaces == int(mFaces.size()));
-	for(int i=0; i<mNbFaces; i++){
-		status[mFaces[i]->mId] = UNVISITED;
-		parents[mFaces[i]->mId] = nullptr;
-	}
-	parents[triangle->mId] = nullptr;
 	status[triangle->mId] = ONGOING;
 
 	// initiate the queue for the BFS search
@@ -705,7 +757,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			// neighbours[i]->print();
 
 			// check if we've found a triangle different from the origin triangle
-			if(neighbours[i]->isTriangle() && status[curNeighbourFaceId] == UNVISITED){
+			if(neighbours[i]->isTriangle() && status.find(curNeighbourFaceId) == status.end()){
 				quit = true;
 				// save the face and update it's parent
 				closestTriangleId = curNeighbourFaceId;
@@ -715,7 +767,7 @@ std::vector<mesh::Face*> mesh::Mesh::pathToClosestTriangle(mesh::Face* triangle)
 			}
 
 			// if current face not visited yet update its status and add it to the queue
-			if(status[curNeighbourFaceId] == UNVISITED){
+			if(status.find(curNeighbourFaceId) == status.end()){
 				status[curNeighbourFaceId] = ONGOING;
 				// update parent
 				parents[curNeighbourFaceId] = curFace;
@@ -771,6 +823,7 @@ void mesh::Mesh::triToPureQuad(){
 		// print();
 		// printf("\n###################### NEW PATH #######################\n");
 		while(path.size() != 0){
+			// start = std::chrono::high_resolution_clock::now();
 			// get current triangle and current quad neighbour
 			curTri = path.back();
 			assert(curTri != nullptr);
@@ -839,16 +892,18 @@ void mesh::Mesh::triToPureQuad(){
 			// printf("v2:\n");
 			// v2->print();
 
+			// get the newly created quad
+			mesh::Face* newPoly = curTri; // the current triangle
+			
 			// remove the edges
 			// printf("\nEdge to remove:\n");
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
-			removeEdge(edgeToRemove);
-			removeEdge(revEdgeToRemove);
+			removeEdgeV2(edgeToRemove);
+			removeEdgeV2(revEdgeToRemove);
 
-			// get the newly created face
-			mesh::Face* newPoly = mFaces.back(); // the last added 
+
 			assert(newPoly->mEdge->mFaceRight->mId == newPoly->mId);
 			// printf("\nNewPoly:\n");
 			// newPoly->print();
@@ -873,8 +928,8 @@ void mesh::Mesh::triToPureQuad(){
 			// edgeToRemove->print();
 			// printf("RevEdge to remove:\n");
 			// revEdgeToRemove->print();
-			removeEdge(edgeToRemove);
-			removeEdge(revEdgeToRemove);
+			removeEdgeV2(edgeToRemove);
+			removeEdgeV2(revEdgeToRemove);
 			// printf("\ndone removing\n");
 		}
 
@@ -1260,3 +1315,722 @@ float mesh::Mesh::getMaxDepth() const{
 
 // }
 
+void mesh::Mesh::initDiagonals(){
+	mDiagHeap.clear();
+	for(int i=0; i<mNbFaces; i++){
+		if(!mFaces[i]->mToDelete)
+			mFaces[i]->createDiagonal();
+	}
+	mDiagHeap = mesh::Face::getMinHeap(mFaces);
+	int nbDiags = int(mDiagHeap.size());
+
+	assert( nbDiags == mNbFaces);
+
+	// for(int i=0; i<nbDiags; i++) mDiagHeap[i]->face->print();
+}
+
+int mesh::Mesh::diagonalCollapse(){
+	if(mDiagHeap.size() == 0) return EMPTY_HEAP;
+	mesh::Diagonal* diag = mDiagHeap.front();
+	assert(diag != nullptr);
+	std::pop_heap(mDiagHeap.begin(), mDiagHeap.end());
+	mDiagHeap.pop_back();
+
+	if(diag->face->mToDelete) return NO_UPDATE;
+
+	// printf("Cur face:\n");
+	// diag->face->print();
+	// diag->face->mEdge->print();
+	// printf("get sur faces:\n");
+	// std::vector<mesh::Face*> surFaces = diag->face->getAllSurroundingFaces();
+	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
+	// printf("\ndone\nget v2 sur edges:\n");
+	// diag->v2->print();
+	// diag->v2->mEdge->print();
+	std::vector<mesh::Face*> surFacesV1 = diag->v1->getSurroundingFaces();
+	std::vector<mesh::Edge*> surEdgesV2 = diag->v2->getSurroundingEdges();
+	// printf("\ndone\n");
+	// std::vector<mesh::Face*> v1SurFaces = diag->v1->getSurroundingFaces();
+
+	// std::vector<mesh::Edge*> surEdge = diag->face->getSurroundingEdges();
+	// printf("\nSurEdges:\n");
+	// for(int i=0; i<int(surEdge.size()); i++) surEdge[i]->print();
+	// printf("\nSurFaces:\n");
+	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
+	// printf("\nV1SurFaces:\n");
+	// for(int i=0; i<int(v1SurFaces.size()); i++) v1SurFaces[i]->print();
+
+	// update old vertex coordinate
+	diag->v1->mCoords = new maths::Vector3((*(diag->v1->mCoords) + *(diag->v2->mCoords)) / 2.0f);
+	// printf("\nv1:\n"); diag->v1->print(); diag->v1->mEdge->print();
+	// printf("v2:\n"); diag->v2->print(); diag->v2->mEdge->print();
+	// printf("\n\n");
+
+	// get edge that goes into the vertex we'll keep
+	mesh::Edge* edgeToKeep1 = diag->face->mEdge;
+	while(edgeToKeep1->mVertexDestination->mId != diag->v1->mId) edgeToKeep1 = edgeToKeep1->mEdgeRightCW;
+	mesh::Edge* edgeToKeep2 = edgeToKeep1->mEdgeRightCW;
+
+	// the edges to merge
+	mesh::Edge* edgeToRemove1 = edgeToKeep1->mEdgeRightCCW;
+	mesh::Edge* edgeToRemove2 = edgeToKeep2->mEdgeRightCW;
+
+	std::vector<mesh::Face*> toUpdate = diag->face->getAllSurroundingFaces();
+
+	// printf("Face before merge:\n"); diag->face->print();
+	// printf("\nSurFaces:\n");
+	// std::vector<mesh::Face*> surFaces = toUpdate;
+	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
+	// printf("done SurFaces");
+	// printf("\nv1:\n"); diag->v1->print(); diag->v1->mEdge->print();
+	// printf("v2:\n"); diag->v2->print(); diag->v2->mEdge->print(); printf("\n\n");
+	// printf("Edge to keep1\n"); edgeToKeep1->print();
+	// printf("Edge to remove1:\n"); edgeToRemove1->print();
+	// printf("Edge to keep2\n"); edgeToKeep2->print();
+	// printf("Edge to remove 2:\n"); edgeToRemove2->print();
+
+	// merge the edges
+	edgeToKeep1->mergeEdge(edgeToRemove1);
+
+	// printf("\nEdge to keep1\n"); edgeToKeep1->print();
+	// printf("Edge to remove1:\n"); edgeToRemove1->print();
+	// printf("Edge to keep2\n"); edgeToKeep2->print();
+	// printf("Edge to remove 2:\n"); edgeToRemove2->print();
+
+	edgeToKeep2->mergeEdge(edgeToRemove2);
+
+	// printf("\nEdge to keep1\n"); edgeToKeep1->print();
+	// printf("Edge to remove1:\n"); edgeToRemove1->print();
+	// printf("Edge to keep2\n"); edgeToKeep2->print();
+	// printf("Edge to remove 2:\n"); edgeToRemove2->print();
+
+	// printf("\nv1:\n"); diag->v1->print(); diag->v1->mEdge->print();
+	// printf("v2:\n"); diag->v2->print(); diag->v2->mEdge->print();
+	// printf("\n\n");
+
+	// remove the face, the vertex and the two useless edges
+	diag->face->mToDelete = true;
+	diag->v2->mToDelete = true;
+
+	// update old vertices
+	diag->v1->mergeVertices(diag->v2, surEdgesV2);
+
+	// printf("\nSurFaces:\n");
+	// for(int i=0; i<int(surFaces.size()); i++) {
+	// 	printf("i: %d\n", i); surFaces[i]->print();
+	// }
+	// printf("Done sur faces\n");
+
+	// printf("Face after merge:\n"); diag->face->print();
+	// surFaces = diag->face->getAllSurroundingFaces();
+	// printf("\nSurFaces:\n");
+	// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
+	// printf("\ndone SurFaces:\n");
+
+	// get the faces to update
+	// std::vector<mesh::Face*> toUpdateDistance = diag->v1->getSurroundingFaces();
+	// mesh::Face::markToUpdate(toUpdateDistance);
+
+	// auto start = std::chrono::high_resolution_clock::now();
+	// remove the doublets
+	removeDoublets(toUpdate);
+	// auto stop = std::chrono::high_resolution_clock::now();
+	// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("time remove doublets: %f\n", double(duration.count()));
+
+	// start = std::chrono::high_resolution_clock::now();
+	// update the diagonals
+	updateDiagonals(toUpdate);	
+	// initDiagonals();
+	// stop = std::chrono::high_resolution_clock::now();
+	// duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    // printf("time update diagonals: %f\n", double(duration.count()));
+
+	// update the heap
+	// std::make_heap(mDiagHeap.begin(), mDiagHeap.end(), mesh::Face::cmpDiagonal);
+
+	return UPDATE;
+}
+
+
+void mesh::Mesh::removeEdgeV2(mesh::Edge* edge){
+	if(edge->mToDelete) return;
+	// edge->print();
+
+	// fixing vertices
+	if(edge->mVertexOrigin->mEdge->mId == edge->mId)
+		edge->mVertexOrigin->mEdge = edge->mEdgeRightCCW->mReverseEdge;
+	if(edge->mVertexDestination->mEdge->mId == edge->mId)
+		edge->mVertexDestination->mEdge = edge->mEdgeRightCW;
+	if(edge->mReverseEdge->mVertexOrigin->mEdge->mId == edge->mReverseEdge->mId)
+		edge->mReverseEdge->mVertexOrigin->mEdge = edge->mReverseEdge->mEdgeRightCCW->mReverseEdge;
+	if(edge->mReverseEdge->mVertexDestination->mEdge->mId == edge->mReverseEdge->mId)
+		edge->mReverseEdge->mVertexDestination->mEdge = edge->mReverseEdge->mEdgeRightCW;
+
+	// fixing faces
+	mesh::Face* leftFace = edge->mFaceLeft;
+	mesh::Face* rightFace = edge->mFaceRight;
+	// leftFace->print();
+	// rightFace->print();
+
+	// update faces' edges to update the new face
+	if(leftFace->mEdge->mId == edge->mId)
+		leftFace->mEdge = edge->mEdgeLeftCW->mReverseEdge;
+	if(rightFace->mEdge->mId == edge->mId)
+		rightFace->mEdge = edge->mEdgeRightCW;
+
+	// merge faces
+	rightFace->mergeFace(leftFace);
+	// edge->print();
+
+	// fixing edges
+	// edge->print();
+	edge->updateAllNeighbours();
+	edge->mReverseEdge->updateAllNeighbours();
+
+	// flag the edge
+	edge->mToDelete = true;
+	edge->mReverseEdge->mToDelete = true;
+
+	// removeDoublets(rightFace->getSurroundingFaces());
+	
+	// removeEdgeFromList(edge);
+}
+
+void mesh::Mesh::removeEdgesFromList(){
+	int i=0;
+	while(i<mNbEdges){
+		mesh::Edge* curEdge = mEdges[i];
+		if(curEdge->mToDelete){
+			mEdges.erase(mEdges.begin()+i);
+			mNbEdges--;
+			continue;
+		}
+		i++;
+	}
+}
+
+void mesh::Mesh::removeFacesFromList(){
+	int i=0;
+	while(i<mNbFaces){
+		mesh::Face* curFace = mFaces[i];
+		if(curFace->mToDelete){
+			mFaces.erase(mFaces.begin()+i);
+			mNbFaces--;
+			continue;
+		}
+		i++;
+	}
+}
+
+void mesh::Mesh::removeVerticesFromList(){
+	int i=0;
+	int nbVerticesDeleted = 0;
+	while(i<mNbVertices){
+		mesh::Vertex* curVertex = mVertices[i];
+		if(curVertex->mToDelete){
+			nbVerticesDeleted++;
+			mVertices.erase(mVertices.begin()+i);
+			mNbVertices--;
+			continue;
+		}
+		// update vertex index
+		curVertex->mId -= nbVerticesDeleted;
+		i++;
+	}
+}
+
+void mesh::Mesh::clean(){
+	removeEdgesFromList();
+	removeFacesFromList();
+	removeVerticesFromList();
+}
+
+void mesh::Mesh::updateDiagonals(std::vector<mesh::Face*> toUpdate){
+	for(int i=0; i<int(toUpdate.size()); i++){
+		// printf("Update diagonals: %d/%d\n", i, int(toUpdate.size()));
+		if(toUpdate[i]->mToDelete) continue;
+		toUpdate[i]->createDiagonal();
+	}
+}
+
+
+void mesh::Mesh::removeDoublet(mesh::Edge* e1, mesh::Edge* e2){
+	std::vector<mesh::Edge*> surEdge = e1->mVertexDestination->getSurroundingEdges();
+	// for(int i=0; i<int(surEdge.size()); i++) {surEdge[i]->print(); surEdge[i]->mFaceRight->print();}
+	assert(surEdge.size() == 4);
+
+	// update edges arround f1
+	e1->mFaceRight->mergeFace(e1->mFaceLeft);
+	// update f1
+	if(e1->mFaceRight->mEdge->mId == e1->mId || e1->mFaceRight->mEdge->mId == e2->mId) 
+		e1->mFaceRight->mEdge = e1->mEdgeRightCCW;
+	if(e1->mFaceRight->mEdge->mId == e1->mReverseEdge->mId || e1->mFaceRight->mEdge->mId == e2->mReverseEdge->mId) 
+		assert(false);
+
+	// update vertices
+	if(e1->mVertexOrigin->mEdge->mId == e1->mId) e1->mVertexOrigin->mEdge = e1->mEdgeRightCCW->mReverseEdge;
+	if(e1->mVertexOrigin->mEdge->mId == e1->mReverseEdge->mId) assert(false);
+	if(e2->mVertexDestination->mEdge->mId == e2->mId) assert(false);
+	if(e2->mVertexDestination->mEdge->mId == e2->mReverseEdge->mId) e2->mVertexDestination->mEdge = e2->mEdgeRightCW;
+
+	// update surrounding edges
+	e1->mEdgeRightCCW->mEdgeRightCW = e1->mReverseEdge->mEdgeRightCW;
+	e1->mEdgeLeftCW->mEdgeLeftCCW = e1->mReverseEdge->mEdgeLeftCCW;
+	e1->mReverseEdge->mEdgeRightCW->mEdgeRightCCW = e1->mEdgeRightCCW;
+	e1->mReverseEdge->mEdgeLeftCCW->mEdgeLeftCW = e1->mEdgeLeftCW;
+
+	e2->mEdgeRightCW->mEdgeRightCCW = e2->mReverseEdge->mEdgeRightCCW;
+	e2->mEdgeLeftCCW->mEdgeLeftCW = e2->mReverseEdge->mEdgeLeftCW;
+	e2->mReverseEdge->mEdgeRightCCW->mEdgeRightCW = e2->mEdgeRightCW;
+	e2->mReverseEdge->mEdgeLeftCW->mEdgeLeftCCW = e2->mEdgeLeftCCW;
+
+	// remove edges
+	e1->mToDelete = true;
+	e2->mToDelete = true;
+	e1->mReverseEdge->mToDelete = true;
+	e2->mReverseEdge->mToDelete = true;
+
+	// remove vertex
+	e1->mVertexDestination->mToDelete = true;
+}
+
+
+
+void mesh::Mesh::removeDoublets(std::vector<mesh::Face*> faces){
+	// end of recurrence
+	if(faces.size() == 0) return;
+
+	int size = int(faces.size());
+
+	// printf("\n\nRemove doublets:\n");
+
+	// compare faces two by two
+	for(int i=0; i < size; i++){
+		mesh::Face* f1 = faces[i];
+
+		if(f1->mToDelete){
+			continue;
+		}
+		// printf("r doublet i: %d\n", i);
+		// f1->print();
+
+		// if singlet
+		if(f1->isSinglet()){
+			std::vector<mesh::Face*> toUpdate = f1->getAllSurroundingFaces();
+			removeSinglet(f1);
+			// printf("removed\n");
+			// mesh::Face::markToUpdate(toUpdate);
+			removeDoublets(toUpdate);
+			updateDiagonals(toUpdate);
+			continue;
+		}
+
+		// if doublet
+		std::vector<mesh::Edge*> doubletEdges = f1->isDoublet();
+		if(doubletEdges.size() > 0){
+			// printf("isDoublet\n");
+			mesh::Edge* e1 = doubletEdges[0];
+			mesh::Edge* e2 = doubletEdges[1];
+			// e1->print();
+			// e2->print();
+			// remove edges
+			// printf("before remove double:\n");f1->print();
+			removeDoublet(e1, e2);
+			// clean();
+			// recursive call
+			// printf("after remove double:\n");f1->print();
+			std::vector<mesh::Face*> toUpdate = f1->getAllSurroundingFaces();
+			// printf("Get surrounding faces\n");
+			toUpdate.push_back(f1);
+
+			if(f1->isSinglet()) removeSinglet(f1);
+
+			// mesh::Face::markToUpdate(toUpdate);
+			removeDoublets(toUpdate);
+			updateDiagonals(toUpdate);
+		}
+
+		// if(f1->mToDelete) continue;
+
+	}
+}
+
+void mesh::Mesh::removeSinglet(mesh::Face* face){
+	// printf("\nSinglet removal:\n");
+	// face->print();
+	std::vector<mesh::Edge*> surEdges = face->getSurroundingEdges(face->mEdge);
+	mesh::Edge* edge = nullptr;
+	for(int i=0; i<int(surEdges.size()); i++){
+		mesh::Edge* curEdge = surEdges[i];
+		// printf("\nCur edge:\n"); curEdge->print(); curEdge->mReverseEdge->print(); curEdge->mFaceLeft->print();
+		assert(!curEdge->mFaceLeft->mToDelete);
+		int nbEdges = curEdge->mEdgeRightCCW->mVertexOrigin->getSurroundingEdges().size();
+		// printf("Cur vertex:\n");
+		// curEdge->mEdgeRightCCW->mVertexOrigin->print();
+		// printf("Nb edges:%d\n", nbEdges);
+		if( nbEdges == 2){
+			edge = curEdge;
+			break;
+		}
+	}
+	
+	if (edge!=nullptr){ // singlet facing inside
+		// printf("\nSinglet removal Inside\n");
+
+		mesh::Edge* nextEdge = edge->mEdgeRightCW;
+
+		// delete stuff
+		edge->mEdgeRightCCW->mToDelete = true;
+		edge->mEdgeRightCCW->mReverseEdge->mToDelete = true;
+		edge->mEdgeRightCCW->mEdgeRightCCW->mToDelete = true;
+		edge->mEdgeRightCCW->mEdgeRightCCW->mReverseEdge->mToDelete = true;
+		nextEdge->mToDelete = true;
+		nextEdge->mReverseEdge->mToDelete = true;
+		face->mToDelete = true;
+		edge->mEdgeRightCCW->mVertexOrigin->mToDelete = true;
+
+		// std::vector<mesh::Face*> surFaces = face->getAllSurroundingFaces();
+		// printf("face singlet:\n"); face->print();
+
+		// printf("\nsur faces of f\n");
+		// for(int i=0; i<int(surFaces.size()); i++) surFaces[i]->print();
+		// printf("done sur faces of f\n");
+
+		// printf("\nsur edges of f\n");
+		// for(int i=0; i<int(surEdges.size()); i++) surEdges[i]->print();
+		// printf("done sur edges of f\n");
+
+		// printf("edge singlet:\n"); edge->print();
+
+		// printf("v ccw:\n"); edge->mEdgeRightCCW->mVertexOrigin->print();
+
+		// surEdges = edge->mEdgeRightCCW->mVertexOrigin->getSurroundingEdges();
+		// printf("\nsur edges of v\n");
+		// for(int i=0; i<int(surEdges.size()); i++) surEdges[i]->print();
+		// printf("done sur edges of v\n");
+
+		// assert(surEdges.size() == 2);
+
+		// update old vertices' edges
+		if(nextEdge->mVertexOrigin->mEdge->mId == nextEdge->mId){
+			nextEdge->mVertexOrigin->mEdge = nextEdge->mReverseEdge->mEdgeRightCW;
+		} else if(nextEdge->mVertexOrigin->mEdge->mId == nextEdge->mReverseEdge->mId){
+			assert(false);
+		}
+		// update old face' edge
+		if(nextEdge->mFaceLeft->mEdge->mId == nextEdge->mReverseEdge->mId){
+			nextEdge->mFaceLeft->mEdge = nextEdge->mReverseEdge->mEdgeRightCW;
+		} else if(nextEdge->mFaceLeft->mEdge->mId == nextEdge->mId){
+			assert(false);
+		}
+
+		// update right side
+		nextEdge->mEdgeLeftCW->mEdgeLeftCCW = edge->mReverseEdge;
+		nextEdge->mEdgeLeftCCW->mEdgeLeftCW = edge->mReverseEdge;
+		nextEdge->mReverseEdge->mEdgeRightCCW->mEdgeRightCW = edge;
+		nextEdge->mReverseEdge->mEdgeRightCW->mEdgeRightCCW = edge;
+
+		// update self
+		edge->mFaceRight = nextEdge->mFaceLeft;
+		edge->mReverseEdge->mFaceLeft = edge->mFaceRight;
+		edge->mVertexOrigin->mEdge = edge;
+
+		edge->mEdgeRightCW = nextEdge->mEdgeLeftCW->mReverseEdge;
+		edge->mEdgeRightCCW = nextEdge->mEdgeLeftCCW->mReverseEdge;
+		edge->mReverseEdge->mEdgeLeftCCW = nextEdge->mEdgeLeftCCW;
+		edge->mReverseEdge->mEdgeLeftCW = nextEdge->mEdgeLeftCW;
+
+		return;
+	}
+
+	// singlet facing outside
+	// printf("\nSinglet removal Outside\n");
+	// get correct edge
+	for(int i=0; i<=int(surEdges.size()); i++){
+		edge = surEdges[i];
+		if(edge->mVertexDestination->mId == edge->mEdgeRightCW->mEdgeRightCW->mVertexDestination->mId) break;
+	}
+	// printf("Edge to edit before:\n"); edge->print(); edge->mEdgeRightCW->print();
+	// printf("Faces to edit before:\n"); edge->mFaceRight->print(); edge->mEdgeRightCW->mFaceRight->print();
+	edge->mFaceRight->mToDelete = true;
+	mesh::Edge* toKeep1 = edge;	mesh::Edge* toKeep2 = edge->mEdgeRightCW;
+	mesh::Edge* toRemove1 = edge->mEdgeRightCCW; mesh::Edge* toRemove2 = edge->mEdgeRightCW->mEdgeRightCW;
+	toKeep1->mergeEdge(toRemove1);
+	toKeep2->mergeEdge(toRemove2);
+	// printf("Edge to edit after:\n"); edge->print(); edge->mEdgeRightCW->print();
+	// printf("Faces to edit after:\n"); edge->mFaceRight->print(); edge->mEdgeRightCW->mFaceRight->print();
+
+}
+
+
+std::vector<std::vector<mesh::Vertex*>> mesh::Mesh::initNeighbourhood(mesh::Vertex* v) const{
+	int nbRadii = mRadii.size();
+	std::vector<std::vector<mesh::Vertex*>> neighbours(nbRadii);
+
+	const int VISITED = 1;
+	const int ONGOING = 2;
+
+	// initiate a dictionary containing the vertex's id as keys and the state of each vertices (unvisited, ongoing or visited) as values
+	int status[mNbVertices];
+
+	status[v->mId] = ONGOING;
+
+	// initiate the queue for the BFS search
+	std::queue<mesh::Vertex*> queue;
+	queue.push(v);
+
+	while(!queue.empty()){
+		// remove current vertex from queue
+		mesh::Vertex* curVertex = queue.front();
+		queue.pop();
+
+		// for each neighbours
+		std::vector<mesh::Vertex*> curNeighbours = curVertex->mNeighbours;
+		// printf("\nnbNeighbours: %d\n", int(neighbours.size()));
+		for(int i=0; i<int(curNeighbours.size()); i++){
+			mesh::Vertex* curNeighbourVertex = curNeighbours[i];
+
+			if(status[curNeighbourVertex->mId] == ONGOING || status[curNeighbourVertex->mId] == VISITED) continue;
+			bool toVisit = false;
+
+			// get the distance between the vertices
+			float dist = maths::Vector3::distance(v->mCoords, curNeighbourVertex->mCoords);
+			assert(dist>=0.0f);
+
+			// push the vertex in the array if in radii
+			for(int j=0; j<nbRadii; j++){
+				if(dist<mRadii[j]){
+					neighbours[j].push_back(curNeighbourVertex);
+					toVisit = true;
+				}
+			}
+
+			// if current vertex not visited yet add it to the queue
+			status[curNeighbourVertex->mId] = ONGOING;
+			if(toVisit){
+				queue.push(curNeighbourVertex);
+			}
+		}
+
+		// done visiting the current vertex
+		status[curVertex->mId] = VISITED;
+	}
+
+
+	// // naive O(n2) implementation
+	// for(int i=0; i<mNbVertices; i++){
+	// 	mesh::Vertex* curVertex = mVertices[i];
+	// 	if(curVertex->mId == v->mId) continue;
+
+	// 	// get the distance between the verties
+	// 	float dist = maths::Vector3::distance(v->mCoords, curVertex->mCoords);
+
+	// 	// push the vertex in the array if in radii
+	// 	for(int j=0; j<nbRadii; j++){
+	// 		if(dist<mRadii[j]) neighbours[j].push_back(curVertex);
+	// 	}
+	// }
+
+	return neighbours;
+}
+
+
+float mesh::Mesh::getFittingError(std::vector<mesh::Vertex*> bpi, maths::Vector3 plane) const {
+	float sum = 0.0f;
+	int bpiSize = int(bpi.size());
+
+	int a = plane.x();
+	int b = plane.y();
+	int c = plane.z();
+
+	for(int i=0; i<bpiSize; i++){
+		maths::Vector3* coords = bpi[i]->mCoords;
+
+		float realZ = coords->z();
+		float estiZ = a*coords->x() + b*coords->y() + c;
+
+		sum += (realZ-estiZ) * (realZ-estiZ);
+	}
+
+	return (bpiSize==0) ? 0.0f : ((1.0f)/bpiSize) * sqrtf(sum);
+}
+
+float mesh::Mesh::getQuadraticFittingErrors(std::vector<float> errors) const{
+	float sum = 0.0f;
+
+	for(int i=0; i<int(mRadii.size()); i++){
+		float ri_2 = mRadii[i]*mRadii[i];
+		float Eri = errors[i];
+
+		sum += ri_2*Eri;
+	}
+
+	return sum;
+}
+
+int mesh::Mesh::getNbInconsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace){
+	int bpiSize = int(bpiFace.size());
+
+	int nbFaces = 0;
+
+	// for each faces get the dot product between n and the normal of the face
+	for(int i=0; i<bpiSize; i++){
+		float dot = maths::Vector3::dot(bpiFace[i]->mNormal, n);
+		// if positive increase the sum
+		if(dot>0) nbFaces++;
+	}
+
+	return nbFaces;
+}
+
+std::vector<std::vector<mesh::Face*>> mesh::Mesh::initNeighbourhoodFaces(std::vector<std::vector<mesh::Vertex*>> bpis){
+	int nbRadii = mRadii.size();
+	std::vector<std::vector<mesh::Face*>> faces(nbRadii);
+
+	std::vector<mesh::Vertex*> bph = bpis[nbRadii-1];
+
+	int i=0; int curMinRadii = 0;
+	while(i<int(bph.size())){
+		mesh::Vertex* curVertex = bph[i];
+		std::vector<mesh::Face*> surFaces = curVertex->mNeighboursFaces;
+
+		if(i>=int(bpis[curMinRadii].size())) curMinRadii++;
+
+		for(int j=curMinRadii; j<nbRadii; j++){
+			faces[j].insert(faces[j].end(), surFaces.begin(), surFaces.end());
+		}
+
+		i++;
+	}
+
+	return faces;
+}
+
+
+
+void mesh::Mesh::buildVerticesFitmaps(){
+	float maxSMap = -INFINITY;
+	float maxMMap = -INFINITY;
+
+	// for each vertex p
+	for(int i=0; i<mNbVertices; i++){
+		mesh::Vertex* p = mVertices[i];
+
+		// create the neighbourhoods
+		// auto start = std::chrono::high_resolution_clock::now();
+		std::vector<std::vector<mesh::Vertex*>> bpis = initNeighbourhood(p);
+		std::vector<std::vector<mesh::Face*>> bpisFaces = initNeighbourhoodFaces(bpis);
+		// auto stop = std::chrono::high_resolution_clock::now();
+		// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    	// printf("init neighbourhood: %f\n", double(duration.count()));
+
+		// the fitting errors
+		std::vector<float> errors;
+
+		// float largest radii for mMap calculation
+		float largestRadii = mRadii[0];
+
+		// for each radii neighbourhood
+		for(int j=0; j<int(bpis.size()); j++){
+			std::vector<mesh::Vertex*> bpi = bpis[j];
+			std::vector<mesh::Face*> bpiFace = bpisFaces[j];
+			int bpiSize = bpi.size();
+			
+			// get the fitting plane using OLS
+			maths::Vector3* interpolatedPlane = mesh::Vertex::getInterpolatedPlane(bpi);
+
+			// mMap
+			float a = interpolatedPlane->x(); float b = interpolatedPlane->y();	float c = interpolatedPlane->z();
+			maths::Vector3 p1(0.0f,0.0f,c); maths::Vector3 p2(1.0f,0.0f,a+c); maths::Vector3 p3(0.0f,1.0f,b+c);
+			// get the normal of the plane
+			maths::Vector3* n = maths::Vector3::getNormalOfPlane(p1, p2, p3);
+			
+			// auto start = std::chrono::high_resolution_clock::now();
+			// get the number of consistently oriented faces
+			int nbInconsistentlyOriented = getNbInconsistentlyOriented(n, bpiFace);
+			// auto stop = std::chrono::high_resolution_clock::now();
+			// auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+			// printf("get consistently oriented: %f\n", double(duration.count()));
+			
+			// check if ratio greater than tolerance
+			float ratio = bpiSize >=0 ? float(nbInconsistentlyOriented) / float(bpiSize) : 0.0f;
+			if( ratio <= THO_FITMAP ) largestRadii = mRadii[j];
+
+			// back to sMap
+			// get the fitting error
+			float Eri = getFittingError(bpi, interpolatedPlane);
+			errors.push_back(Eri);
+		}
+
+		// get the quadratic error regression
+		float a = getQuadraticFittingErrors(errors);
+		// assign the sMap
+		p->mSFitmap = sqrtf(a);
+		// assign the mMap
+		p->mMFitmap = largestRadii;
+
+		// update max
+		if(p->mSFitmap > maxSMap) maxSMap = p->mSFitmap;
+		if(p->mMFitmap > maxMMap) maxMMap = p->mMFitmap;
+		
+	}
+	// normalize fitmaps
+	for(int i=0; i<mNbVertices; i++){
+		// printf("\n\nMaxMMap: %f, MaxSMap: %f\n", maxMMap, maxSMap);
+		mesh::Vertex* p = mVertices[i];
+		// printf("MMap before: %f\n", p->mMFitmap);
+		// printf("SMap before: %f\n", p->mSFitmap);
+		if(maxSMap)
+			p->mSFitmap /= maxSMap;
+		if(maxMMap)
+			p->mMFitmap /= maxMMap;
+		// printf("MMap after: %f\n", p->mMFitmap);
+		// printf("SMap after: %f\n\n", p->mSFitmap);
+	}
+}
+
+void mesh::Mesh::buildFacesFitmaps(){
+	// for each faces f
+	for(int i=0; i<mNbFaces; i++){
+		mesh::Face* f = mFaces[i];
+		// get interpolated values
+		std::vector<mesh::Vertex*> surVertices = f->getSurroundingVertices();
+		float sumSMap = 0.0f;
+		float sumMMap = 0.0f;
+		for(int j=0; j<int(surVertices.size()); j++){
+			sumSMap += surVertices[j]->mSFitmap;
+			sumMMap += surVertices[j]->mMFitmap;
+		}
+
+		f->mSFitmap = sumSMap / float(surVertices.size());
+		f->mMFitmap = sumMMap / float(surVertices.size());
+	}
+}
+
+void mesh::Mesh::buildFitmaps(){
+	initRadii();
+	buildVerticesFitmaps();
+	buildFacesFitmaps();
+}
+
+void mesh::Mesh::initRadii(){
+	// get the average edge's length
+	float sumEdges = 0.0f;
+	for(int i=0; i<mNbEdges; i++){
+		sumEdges += mEdges[i]->getLength();
+	}
+	float r0 = sumEdges / mNbEdges;
+
+	// get the diagonal of the bounding box
+	float rh = 0.25f * maths::Vector3(getWidth(), getHeight(), getDepth()).norm();
+
+	// get the equation for the radii distribution
+	float a = (r0-rh) / (1-exp(H_FITMAP));
+	float b = r0 - a;
+
+	for(int i=0; i<=H_FITMAP; i++){
+		// printf("radii[%d]: %f\n", i, a*exp(i)+b);
+		mRadii.push_back(a*exp(i) + b);
+	}
+}
