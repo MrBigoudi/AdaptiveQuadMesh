@@ -524,12 +524,12 @@ class Mesh{
         float getQuadraticFittingErrors(std::vector<float> errors) const;
 
         /**
-         * Get the number of faces consistently oriented with the given normal of a plane
+         * Get the number of faces inconsistently oriented with the given normal of a plane
          * @param n The normal of the plane
          * @param bpiFace The neighbourhood considered
          * @return The number of faces
         */
-        int getNbConsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace);
+        int getNbInconsistentlyOriented(maths::Vector3* n, std::vector<mesh::Face*> bpiFace);
 
 
 

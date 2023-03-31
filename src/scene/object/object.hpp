@@ -69,6 +69,11 @@ class Object{
         */
         bool mDrawSMap = false, mDrawMMap = false;
 
+        /**
+         * The number of diagonals to collapse
+        */
+        int mNbCollapses = 0;
+
 
     public:
         /**
@@ -158,8 +163,9 @@ class Object{
 
         /**
          * Do a diagonal collapse
+         * @param nb The number of diagonal we want to collapse
         */
-        void diagonalCollapse();
+        void diagonalCollapse(int nb);
 
         /**
          * Draw the S-fitmap

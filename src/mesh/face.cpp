@@ -271,10 +271,14 @@ void mesh::Face::createDiagonal(){
     mesh::Vertex* v1 = nullptr;
     mesh::Vertex* v2 = nullptr;
 
+    // print();
+
     for(int i=0; i<2; i++){
         float curDist = maths::Vector3::distance(surVertices[i]->mCoords, surVertices[i+2]->mCoords);
         mesh::Vertex* tmpV1 = surVertices[i];
         mesh::Vertex* tmpV2 = surVertices[i+2];
+        // tmpV1->print();
+        // tmpV2->print();
         assert(!tmpV1->mToDelete);
         assert(!tmpV2->mToDelete);
 

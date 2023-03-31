@@ -3,27 +3,27 @@
 ## Tri to quad
 
 - [x] Correct useless edges
-- [ ] Correct edge->check()
+- [x] Correct edge->check()
 
 ## Opengl
 
-- [ ] Add transformations in direct
+- [x] Add transformations in direct
 
 ## Simplification
 
-- [~] Correct diagonal collapse
-- [~] Add singlet removal
-- [~] Add doublet removal
+- [ ] Correct diagonal collapse
+- [x] Add singlet removal
+- [x] Add doublet removal
 - [ ] Add edge rotations
-- [ ] Implement the algorithm
 
 ## Adaptive simplification
 
-- [ ] Add fitmaps
+- [x] Add fitmaps
+- [ ] Correct fitmaps
 
 ## Report
 
-- [ ] Add load obj part
-- [ ] Add tri-to quad phase1 part
-- [ ] Add tri-to quad phase2 part
-- [ ] Add opengl part
+- [x] Add load obj part
+- [x] Add tri-to quad phase1 part
+- [x] Add tri-to quad phase2 part
+- [x] Add opengl part

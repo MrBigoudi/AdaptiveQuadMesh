@@ -236,14 +236,26 @@ void scene::Object::initCamera(scene::Camera* camera) const {
     // printf("camera: %s\n", camera->mPosition.toString().c_str());
 }
 
-void scene::Object::diagonalCollapse(){
+void scene::Object::diagonalCollapse(int nb){
     if(!mDiagInit) {
         mMesh->initDiagonals();
         mDiagInit = true;
     }
-    mMesh->diagonalCollapse();
-    mMesh->clean();
 
+    int nbCollapses = nb <= mMesh->mNbFaces >> 1 ? nb : mMesh->mNbFaces >> 1;
+
+    for(int i=1; i<=nbCollapses; i++){
+        // printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
+        // auto start = std::chrono::high_resolution_clock::now();
+        while(!mMesh->diagonalCollapse());
+        // auto stop = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        // printf("time diagonal collapse: %f\n", double(duration.count()));
+        // fromObj.clean();
+        // fromObj.checkCorrectness(); 
+    }
+
+    mMesh->clean();
     initVerticesAndIndices();
     initDim();
     initVao();
