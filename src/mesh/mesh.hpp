@@ -21,9 +21,14 @@ class Mesh{
 
     private:
         /**
-         * Constant value for calculating fitmaps
+         * Maximum radii id
         */
-        static int H_FITMAP; static float THO_FITMAP;
+        static int H_FITMAP; 
+        
+        /**
+         * Tolerance for M fitmap calculation
+        */
+        static float THO_FITMAP;
 
     public:
         /**
@@ -160,46 +165,55 @@ class Mesh{
 
         /**
          * Get the minimum height of one of the object's vertices
+         * @return The minimum height as a floating point
         */
         float getMinHeight() const;
 
         /**
          * Get the maximum height of one of the object's vertices
+         * @return The maximum height as a floating point
         */
         float getMaxHeight() const;
 
         /**
          * Get the minimum width of one of the object's vertices
+         * @return The minimum width as a floating point
         */
         float getMinWidth() const;
 
         /**
          * Get the maximum width of one of the object's vertices
+         * @return The maximum width as a floating point
         */
         float getMaxWidth() const;
 
         /**
          * Get the minimum depth of one of the object's vertices
+         * @return The minimum depth as a floating point
         */
         float getMinDepth() const;
 
         /**
          * Get the maximum depth of one of the object's vertices
+         * @return The maximum depth as a floating point
         */
         float getMaxDepth() const;
 
         /**
          * Get the height of the object
+         * @return The mesh's height as a floating point
         */
         float getHeight() const;
 
         /**
          * Get the width of the object
+         * @return The mesh's width as a floating point
         */
         float getWidth() const;
 
         /**
          * Get the depth of the object
+         * @return The mesh's depth as a floating point
         */
         float getDepth() const;
 
@@ -305,7 +319,7 @@ class Mesh{
 
         /**
          * Get the path of faces to reach the closest triangle using a BFS
-         * @param triOrigin The triangle from where to start
+         * @param triangle The triangle from where to start
          * @return The path as a list of faces (assert false if triOrigin is the last triangle)
         */
         std::vector<mesh::Face*> pathToClosestTriangle(mesh::Face* triangle) const;

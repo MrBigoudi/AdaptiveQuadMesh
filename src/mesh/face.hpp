@@ -93,17 +93,16 @@ class Face{
         maths::Vector3* mNormal;
 
         /**
-         * Fitmaps
+         * The S fitmap
         */
-        float mSFitmap = 0.0f, mMFitmap = 0.0f;
+        float mSFitmap = 0.0f;
+        
+        /**
+         * The M fitmap
+        */ 
+        float mMFitmap = 0.0f;
 
     public:
-        /**
-         * Get a list of all edges surrounding the face given the starting point
-         * @param startingEdge The edge where to start the loop
-        */
-        std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge) const;
-
         /**
          * A basic constructor
          * @param edge The edge we'll store
@@ -111,6 +110,14 @@ class Face{
         Face(mesh::Edge* edge = nullptr){
             mEdge = edge;
         };
+
+        /**
+         * Get a list of all edges surrounding the face given the starting point
+         * @param startingEdge The edge where to start the loop
+         * @return The list of edges surrounding the face
+        */
+        std::vector<mesh::Edge*> getSurroundingEdges(mesh::Edge* startingEdge) const;
+
 
         /**
          * Get a list of all edges surrounding the current face

@@ -89,7 +89,15 @@ class Edge{
     public:
         /**
          * A basic constructor
-         * @param 
+         * @param vOrigin The origin vertex
+         * @param vDest The destination vertex
+         * @param faceL The left face
+         * @param faceR The right face
+         * @param edgeLCW The left clock wise edge
+         * @param edgeLCCW The left counter clock wise edge
+         * @param edgeRCW The right clock wise edge
+         * @param edgeRCCW The right counter clock wise edge
+         * @param reversed The reversed edge
         */
         Edge(mesh::Vertex* vOrigin = nullptr, mesh::Vertex* vDest = nullptr, mesh::Face* faceL = nullptr, mesh::Face* faceR = nullptr, 
                 mesh::Edge* edgeLCW = nullptr, mesh::Edge* edgeLCCW = nullptr, mesh::Edge* edgeRCW = nullptr, mesh::Edge* edgeRCCW = nullptr, 

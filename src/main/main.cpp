@@ -213,7 +213,9 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
             ImGui::InputInt("Number of diagonals to collapse", &object->mNbCollapses);
             
             if(ImGui::Button("Diagonal Collapse")){
+                printf("\n########## SIMPLIFICATION BEGIN ##############\n");
                 object->diagonalCollapse(object->mNbCollapses);
+                printf("\n########## SIMPLIFICATION END ##############\n");
             }
             if(ImGui::Button("Render S-fitmap")){
                 object->drawSMap();
@@ -334,20 +336,20 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char** argv){
 //     //     // fromObj.toObj("bin/objects/tmp.obj");
 //     // }
 
-//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunnyQuad.obj");
+//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunnyQuad.obj");
 //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/chess_piece.obj");
-//     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
+//     mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/bunny.obj");
 //     // mesh::Mesh fromObj = mesh::Mesh::loadOBJ("media/objects/armadillo.obj");
-//     // fromObj.triToQuad();
+//     fromObj.triToQuad();
 //     fromObj.removeDoublets(fromObj.mFaces);
 //     fromObj.clean();
 //     fromObj.checkCorrectness();
 //     fromObj.initDiagonals();
 //     // int nbCollapses = fromObj.mNbFaces >> 1;
-//     // int nbCollapses = 20000;    
-//     int begNbFaces = fromObj.mNbFaces;
-//     int targetNbFaces = 5000;
-//     int nbCollapses = begNbFaces-targetNbFaces;
+//     int nbCollapses = 10000;    
+//     // int begNbFaces = fromObj.mNbFaces;
+//     // int targetNbFaces = 10000;
+//     // int nbCollapses = begNbFaces-targetNbFaces;
 //     for(int i=1; i<=nbCollapses; i++){
 //         printf("\n\n####################################  Digaonal collapse: %d/%d ####################################\n\n\n", i, nbCollapses);
 //         auto start = std::chrono::high_resolution_clock::now();

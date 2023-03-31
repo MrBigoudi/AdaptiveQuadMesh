@@ -42,9 +42,14 @@ class Vertex{
         bool mToDelete = false;
 
         /**
-         * Fitmaps
+         * The S Fitmap
         */
-        float mSFitmap = 0.0f, mMFitmap = 0.0f;
+        float mSFitmap = 0.0f;
+        
+        /**
+         * The M fitmap
+        */
+        float mMFitmap = 0.0f;
 
         /**
          * The list of neighbour vertices (at initialization)
@@ -75,6 +80,7 @@ class Vertex{
 
         /**
          * Cast a list of vertices into a printable string
+         * @param list The list of vertices to cast into a string
          * @return The vertices as a string
         */
         static std::string listToString(std::vector<mesh::Vertex*> list);
@@ -198,7 +204,7 @@ class Vertex{
 
         /**
          * Get the dot products between a given normal and a list of vertices
-         * @param noraml The normal of a certain plane
+         * @param normal The normal of a certain plane
          * @param vertices The vertices we want to get the dot product with
          * @return A list of floating point values
         */

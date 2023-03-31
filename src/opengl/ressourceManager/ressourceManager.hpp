@@ -28,7 +28,7 @@ class Shader;
 class ResourceManager {
 
     public:
-        /*
+        /**
          * resource storage
         */
         static std::map<std::string, opengl::Shader*> mShaders;

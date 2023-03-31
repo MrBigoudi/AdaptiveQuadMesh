@@ -120,7 +120,7 @@ dirs:
 ## Build the documentation
 doc:
 	@printf "\n\n\n########## BUILDING THE DOCUMENTATION ##########\n\n\n"
-	$(HIDE)$(DOCCONF) $(DOCSRC)
+	$(HIDE)$(DOCGEN) ./$(DOCCONF)
 	@printf "\n\n########## DONE ##########\n\n\n"
 
 # Remove all objects, dependencies and executable files generated during the build
