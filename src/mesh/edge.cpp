@@ -175,36 +175,31 @@ void mesh::Edge::mergeEdge(mesh::Edge* e2){
         // update RCW
         edgeToMerge->mEdgeRightCW->mEdgeRightCCW = this;
         e2->mEdgeLeftCW->mEdgeLeftCCW = mReverseEdge;
-
-        // remove the edges
-        e2->mToDelete = true;
-        edgeToMerge->mToDelete = true;
     }
 
     // update if self is left side
     else if(pos == mesh::LCW || pos == mesh::LCCW){
-        assert(false);
+        // assert(false);
         // printf("\nPOS = Left\n");
         // update self
-        // update LCW
-        mEdgeLeftCW = edgeToMerge->mEdgeLeftCW;
-        mReverseEdge->mEdgeRightCW = edgeToMerge->mEdgeLeftCW->mReverseEdge;
-        // update LCCW
         mEdgeLeftCCW = edgeToMerge->mEdgeLeftCCW;
-        mReverseEdge->mEdgeRightCCW = edgeToMerge->mEdgeLeftCCW->mReverseEdge;
-        // update faces
+        mEdgeLeftCW = edgeToMerge->mEdgeLeftCW;
         mFaceLeft = edgeToMerge->mFaceLeft;
-        mReverseEdge->mFaceRight = edgeToMerge->mFaceRight;
-     
-        // update edgeToMerge neighbours
-        // update edgeToMerge->LCW
-        edgeToMerge->mEdgeLeftCW->mEdgeLeftCCW = this;
-        edgeToMerge->mEdgeLeftCW->mReverseEdge->mEdgeRightCCW = mReverseEdge;
-        // update edgeToMerge->LCCW
+        mReverseEdge->mEdgeRightCCW = e2->mEdgeRightCCW;
+        mReverseEdge->mEdgeRightCW = e2->mEdgeRightCW;
+        mReverseEdge->mFaceRight = e2->mFaceRight;
+
+        // update LCCW
         edgeToMerge->mEdgeLeftCCW->mEdgeLeftCW = this;
-        edgeToMerge->mEdgeLeftCCW->mReverseEdge->mEdgeRightCW = mReverseEdge;
+        e2->mEdgeRightCCW->mEdgeRightCW = mReverseEdge;
+        // update LCW
+        edgeToMerge->mEdgeLeftCW->mEdgeLeftCCW = this;
+        e2->mEdgeRightCW->mEdgeRightCCW = mReverseEdge;
     }
 
+    // remove the edges
+    e2->mToDelete = true;
+    edgeToMerge->mToDelete = true;
 }
 
 
