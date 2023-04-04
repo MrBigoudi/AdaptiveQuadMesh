@@ -2,6 +2,8 @@
 
 Implementation in C++ of an [adaptive quad mesh simplification algorithm](media/publications/adaptive_quad_mesh_simplification.pdf)
 
+Repository: [AdaptiveQuadMesh](https://github.com/MrBigoudi/AdaptiveQuadMesh)
+
 # Representing meshes
 
 ## Structure
